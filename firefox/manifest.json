@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "Hide Checked Rows",
+  "version": "1.0",
+  "description": "Skjuler afstemte posteringer automatisk",
+  "permissions": ["activeTab", "storage"],
+  "host_permissions": ["https://netbank.nykredit.dk/*"],
+  "content_scripts": [
+    {
+      "matches": ["https://netbank.nykredit.dk/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Skjul afstemte posteringer"
+  }
+}
