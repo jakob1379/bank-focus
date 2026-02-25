@@ -29,10 +29,26 @@
         name = "run-tests";
         runtimeInputs = with pkgs; [ 
           playwright-test
+          nodePackages.http-server
         ];
         text = ''
           # Setup extension files first
           bash setup-tests.sh
+          
+          # Start HTTP server for test fixtures in background
+          echo "Starting HTTP server for test fixtures..."
+          http-server tests/fixtures -p 8080 --silent &
+          HTTP_SERVER_PID=$!
+          
+          # Wait for server to be ready
+          sleep 1
+          
+          # Cleanup function
+          cleanup() {
+            echo "Stopping HTTP server..."
+            kill $HTTP_SERVER_PID 2>/dev/null || true
+          }
+          trap cleanup EXIT
           
           # Run tests from tests directory
           cd tests

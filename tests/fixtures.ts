@@ -129,12 +129,17 @@ export const test = base.extend<TestFixtures>({
     await use(openPopup);
   },
 
-  // Helper to load the local HTML dump
+  // Store reference to content script pages for integration testing
+  _contentPages: [],
+
+  // Helper to load the local HTML dump from HTTP server
   loadLocalPage: async ({ context }, use) => {
+    const contentPages: Page[] = [];
+    
     const loadLocalPage = async (): Promise<Page> => {
       const page = context.pages()[0] || await context.newPage();
-      const htmlPath = path.join(__dirname, 'fixtures', 'Nykredit Privat.html');
-      await page.goto(`file://${htmlPath}`);
+      // Use HTTP server instead of file:// protocol
+      await page.goto('http://localhost:8080/Nykredit%20Privat.html');
       
       // Wait for the page to have the expected elements (check existence, not visibility)
       await page.waitForSelector('.PostingTable-tr', { state: 'attached', timeout: 10000 });
@@ -145,6 +150,7 @@ export const test = base.extend<TestFixtures>({
         const contentScript = fs.readFileSync(contentScriptPath, 'utf-8');
         
         // Mock the browser API for content script in file:// context
+        // Also expose a function to enable/disable for integration testing
         const mockBrowserAPI = `
           if (typeof browser === 'undefined' && typeof chrome === 'undefined') {
             window.browser = {
@@ -173,6 +179,13 @@ export const test = base.extend<TestFixtures>({
         
         await page.addInitScript(mockBrowserAPI + '\n' + contentScript);
       }
+      
+      // Store reference for integration tests
+      contentPages.push(page);
+      // Expose to window for access from popup context
+      await page.evaluate(() => {
+        window.__isContentPage = true;
+      });
       
       return page;
     };
