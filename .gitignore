@@ -3,3 +3,17 @@
 *.zip
 *.xpi
 result
+
+# Playwright test artifacts
+tests/node_modules/
+tests/test-results/
+tests/playwright-report/
+tests/playwright/.cache/
+
+# Copied extension files during build
+chrome/content.js
+chrome/popup.js
+chrome/popup.html
+firefox/content.js
+firefox/popup.js
+firefox/popup.html
