@@ -159,7 +159,7 @@ test.describe('Nykredit Extension', () => {
     test('handles checkbox change events when enabled', async ({ loadLocalPage }) => {
       const page = await loadLocalPage();
       
-      await page.waitForSelector('.PostingTable-tr', { timeout: 10000 });
+      await page.waitForSelector('.PostingTable-tr', { state: 'attached', timeout: 10000 });
       
       const rows = page.locator('.PostingTable-tr');
       const count = await rows.count();
@@ -202,7 +202,7 @@ test.describe('Nykredit Extension', () => {
       const popup = await openPopup();
       
       // Wait for both pages to be ready
-      await page.waitForSelector('.PostingTable-tr', { timeout: 10000 });
+      await page.waitForSelector('.PostingTable-tr', { state: 'attached', timeout: 10000 });
       await popup.waitForSelector('.toggle-slider');
       
       const rows = page.locator('.PostingTable-tr');
