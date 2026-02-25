@@ -57,9 +57,6 @@
           ];
           
           shellHook = ''
-            export PLAYWRIGHT_BROWSERS_PATH="${pkgs.playwright-driver.browsers}"
-            export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
-            
             echo "Nykredit Extension Development Environment"
             echo ""
             echo "Available commands:"
