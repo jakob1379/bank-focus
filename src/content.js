@@ -1,3 +1,5 @@
+const browserAPI = typeof browser !== 'undefined' ? browser : chrome;
+
 let observer = null;
 
 const processRow = (row) => {
@@ -25,11 +27,11 @@ const disable = () => {
   document.querySelectorAll('.PostingTable-tr').forEach(r => r.style.display = '');
 };
 
-chrome.storage.local.get('hideEnabled', ({hideEnabled}) => {
+browserAPI.storage.local.get('hideEnabled').then(({hideEnabled}) => {
   if (hideEnabled) enable();
 });
 
-chrome.runtime.onMessage.addListener((msg) => {
+browserAPI.runtime.onMessage.addListener((msg) => {
   if (msg.action === 'enable') enable();
   if (msg.action === 'disable') disable();
 });

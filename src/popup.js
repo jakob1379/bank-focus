@@ -1,3 +1,5 @@
+const browserAPI = typeof browser !== 'undefined' ? browser : chrome;
+
 const checkbox = document.getElementById('toggle');
 const statusDot = document.getElementById('status-dot');
 const statusText = document.getElementById('status-text');
@@ -12,7 +14,7 @@ function updateStatus(enabled) {
   }
 }
 
-chrome.storage.local.get('hideEnabled', ({hideEnabled}) => {
+browserAPI.storage.local.get('hideEnabled').then(({hideEnabled}) => {
   checkbox.checked = !!hideEnabled;
   updateStatus(!!hideEnabled);
 });
@@ -20,10 +22,10 @@ chrome.storage.local.get('hideEnabled', ({hideEnabled}) => {
 checkbox.addEventListener('change', async (e) => {
   const enabled = e.target.checked;
   updateStatus(enabled);
-  await chrome.storage.local.set({ hideEnabled: enabled });
+  await browserAPI.storage.local.set({ hideEnabled: enabled });
 
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  const [tab] = await browserAPI.tabs.query({ active: true, currentWindow: true });
   if (tab?.id) {
-    chrome.tabs.sendMessage(tab.id, { action: enabled ? 'enable' : 'disable' });
+    browserAPI.tabs.sendMessage(tab.id, { action: enabled ? 'enable' : 'disable' });
   }
 });
