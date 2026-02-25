@@ -33,7 +33,7 @@
         ];
         text = ''
           # Setup extension files first
-          bash setup-tests.sh
+          bash tests/setup-tests.sh
 
           # Start HTTP server for test fixtures in background
           echo "Starting HTTP server for test fixtures..."
