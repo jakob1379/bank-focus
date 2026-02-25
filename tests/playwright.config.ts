@@ -9,7 +9,8 @@ export default defineConfig({
   testMatch: '*.spec.ts',
   
   // Extensions require headed mode, but tests can run headless for content script tests
-  headless: false,
+  // Override with HEADLESS=true env var for CI
+  headless: process.env.HEADLESS === 'true' ? true : false,
   
   // Global timeout for each test
   timeout: 60000,
@@ -47,6 +48,12 @@ export default defineConfig({
             '--disable-features=ChromeWhatsNewUI',
           ],
         },
+      },
+    },
+    {
+      name: 'firefox',
+      use: {
+        ...devices['Desktop Firefox'],
       },
     },
   ],
