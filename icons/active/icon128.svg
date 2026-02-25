@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <!-- Nykredit Dark Blue Background Circle -->
+  <circle cx="64" cy="64" r="60" fill="#00205B"/>
+  <!-- White X Mark -->
+  <path d="M48 48 L80 80 M80 48 L48 80" stroke="#FFFFFF" stroke-width="10" stroke-linecap="round"/>
+  <!-- Filter Funnel (simplified) -->
+  <path d="M40 36 L88 36 L70 60 L70 80 L58 80 L58 60 Z" fill="none" stroke="#FFFFFF" stroke-width="6" stroke-linejoin="round"/>
+</svg>

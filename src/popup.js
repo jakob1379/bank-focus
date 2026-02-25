@@ -14,14 +14,31 @@ function updateStatus(enabled) {
   }
 }
 
+function setIcon(enabled) {
+  const iconPath = enabled ? {
+    '16': 'icons/active/icon16.svg',
+    '48': 'icons/active/icon48.svg',
+    '128': 'icons/active/icon128.svg'
+  } : {
+    '16': 'icons/inactive/icon16.svg',
+    '48': 'icons/inactive/icon48.svg',
+    '128': 'icons/inactive/icon128.svg'
+  };
+  
+  browserAPI.action.setIcon({ path: iconPath });
+}
+
 browserAPI.storage.local.get('hideEnabled').then(({hideEnabled}) => {
-  checkbox.checked = !!hideEnabled;
-  updateStatus(!!hideEnabled);
+  const enabled = !!hideEnabled;
+  checkbox.checked = enabled;
+  updateStatus(enabled);
+  setIcon(enabled);
 });
 
 checkbox.addEventListener('change', async (e) => {
   const enabled = e.target.checked;
   updateStatus(enabled);
+  setIcon(enabled);
   await browserAPI.storage.local.set({ hideEnabled: enabled });
 
   const [tab] = await browserAPI.tabs.query({ active: true, currentWindow: true });

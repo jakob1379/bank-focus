@@ -27,11 +27,33 @@ const disable = () => {
   document.querySelectorAll('.PostingTable-tr').forEach(r => r.style.display = '');
 };
 
+function setIcon(enabled) {
+  const iconPath = enabled ? {
+    '16': 'icons/active/icon16.svg',
+    '48': 'icons/active/icon48.svg',
+    '128': 'icons/active/icon128.svg'
+  } : {
+    '16': 'icons/inactive/icon16.svg',
+    '48': 'icons/inactive/icon48.svg',
+    '128': 'icons/inactive/icon128.svg'
+  };
+  
+  browserAPI.action.setIcon({ path: iconPath });
+}
+
 browserAPI.storage.local.get('hideEnabled').then(({hideEnabled}) => {
-  if (hideEnabled) enable();
+  const enabled = !!hideEnabled;
+  setIcon(enabled);
+  if (enabled) enable();
 });
 
 browserAPI.runtime.onMessage.addListener((msg) => {
-  if (msg.action === 'enable') enable();
-  if (msg.action === 'disable') disable();
+  if (msg.action === 'enable') {
+    enable();
+    setIcon(true);
+  }
+  if (msg.action === 'disable') {
+    disable();
+    setIcon(false);
+  }
 });
