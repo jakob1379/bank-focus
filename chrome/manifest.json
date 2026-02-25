@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Hide Checked Rows",
   "version": "1.0",
-  "description": "Skjuler afstemte posteringer automatisk",
+  "description": "Focus on what needs your attention by hiding already-reconciled transactions from your account overview",
   "permissions": ["storage", "activeTab"],
   "host_permissions": ["https://netbank.nykredit.dk/*"],
   "content_scripts": [{
