@@ -41,6 +41,26 @@ nix build .#chrome
 
 The built extension will be in `./result/`.
 
+## Testing
+
+Run the Playwright tests to verify the extension works in both browsers:
+
+```bash
+nix run .#playwright-test
+```
+
+Or manually:
+```bash
+cd tests
+npm install
+npm test
+```
+
+Tests run in headed mode so you can see the browser interactions. They verify:
+- Extension popup toggle works
+- Content script hides checked rows
+- Rows reappear when disabled
+
 ## Install
 
 ### Firefox
