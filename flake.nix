@@ -25,15 +25,12 @@
       };
 
       # Playwright test package - uses Nix-managed playwright, no npm
-      playwright-test = pkgs.writeShellApplication {
-        name = "playwright-test";
+      run-tests = pkgs.writeShellApplication {
+        name = "run-tests";
         runtimeInputs = with pkgs; [ 
-          playwright-driver
+          playwright-test  # Provides the 'playwright' command
         ];
         text = ''
-          export PLAYWRIGHT_BROWSERS_PATH="${pkgs.playwright-driver.browsers}"
-          export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
-          
           cd tests
           
           # Run tests using Nix-managed playwright
@@ -47,13 +44,13 @@
           chrome = mkExtension "nykredit-extension-chrome" "chrome.zip";
           firefox = mkExtension "nykredit-extension-firefox" "firefox.xpi";
           default = self.packages.${system}.firefox;
-          playwright-test = playwright-test;
+          run-tests = run-tests;
         };
         
         devShell = pkgs.mkShell {
           buildInputs = with pkgs; [
             zip
-            playwright-driver
+            playwright-test
           ];
           
           shellHook = ''
@@ -62,12 +59,12 @@
             echo "Available commands:"
             echo "  nix build .#chrome        - Build Chrome extension"
             echo "  nix build .#firefox       - Build Firefox extension"
-            echo "  nix run .#playwright-test - Run Playwright tests"
+            echo "  nix run .#run-tests       - Run Playwright tests"
             echo ""
             echo "Test commands:"
-            echo "  cd tests && playwright test       - Run all tests"
-            echo "  cd tests && playwright test --project=chrome  - Chrome only"
-            echo "  cd tests && playwright test --project=firefox - Firefox only"
+            echo "  nix run .#run-tests                    - Run all tests"
+            echo "  nix run .#run-tests -- --project=chrome  - Chrome only"
+            echo "  nix run .#run-tests -- --project=firefox - Firefox only"
           '';
         };
       }
