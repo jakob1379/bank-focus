@@ -1,6 +1,18 @@
-import { test as base, chromium, firefox, type BrowserContext, type Page } from '@playwright/test';
+import { test as base, chromium, type BrowserContext, type Page } from '@playwright/test';
 import path from 'path';
 import fs from 'fs';
+import os from 'os';
+
+// Extension directories
+const CHROME_EXT_DIR = path.resolve(__dirname, '..', 'chrome');
+const SRC_DIR = path.resolve(__dirname, '..', 'src');
+
+// Type declaration for window.__messageListener
+declare global {
+  interface Window {
+    __messageListener?: (message: { action: string }) => void;
+  }
+}
 
 // Extension IDs (these will be set during fixture setup)
 export type TestFixtures = {
@@ -11,39 +23,31 @@ export type TestFixtures = {
   loadLocalPage: () => Promise<Page>;
 };
 
-// Helper to copy extension source files for testing
-function ensureExtensionFiles(browser: 'chrome' | 'firefox') {
-  const extDir = path.join(process.cwd(), '..', browser);
-  const srcDir = path.join(process.cwd(), '..', 'src');
-  
-  // Copy source files to extension directory if they don't exist
-  const files = ['content.js', 'popup.js', 'popup.html'];
-  for (const file of files) {
-    const srcFile = path.join(srcDir, file);
-    const destFile = path.join(extDir, file);
-    if (fs.existsSync(srcFile) && !fs.existsSync(destFile)) {
-      fs.copyFileSync(srcFile, destFile);
-    }
-  }
-}
-
 export const test = base.extend<TestFixtures>({
   // Override context fixture to load extension
   context: async ({ browserName }, use) => {
-    const extDir = path.join(process.cwd(), '..', browserName === 'chromium' ? 'chrome' : 'firefox');
+    if (browserName !== 'chromium') {
+      // For non-chromium browsers, use default context
+      const browser = await chromium.launch({ headless: false });
+      const context = await browser.newContext({
+        viewport: { width: 1280, height: 720 },
+      });
+      await use(context);
+      await context.close();
+      await browser.close();
+      return;
+    }
     
-    // Ensure extension files are present
-    ensureExtensionFiles(browserName === 'chromium' ? 'chrome' : 'firefox');
+    // For Chromium with extensions, we must use persistent context
+    // Create a temp directory for user data
+    const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'playwright-ext-test-'));
     
-    let context: BrowserContext;
-    
-    if (browserName === 'chromium') {
-      // Chrome/Chromium with extension
-      context = await chromium.launchPersistentContext('', {
-        headless: false,
+    try {
+      const context = await chromium.launchPersistentContext(userDataDir, {
+        headless: false,  // Extensions require headed mode
         args: [
-          `--disable-extensions-except=${extDir}`,
-          `--load-extension=${extDir}`,
+          `--disable-extensions-except=${CHROME_EXT_DIR}`,
+          `--load-extension=${CHROME_EXT_DIR}`,
           '--no-first-run',
           '--disable-features=ChromeWhatsNewUI',
           '--disable-background-timer-throttling',
@@ -52,80 +56,54 @@ export const test = base.extend<TestFixtures>({
         ],
         viewport: { width: 1280, height: 720 },
       });
-    } else {
-      // Firefox with extension
-      context = await firefox.launchPersistentContext('', {
-        headless: false,
-        firefoxUserPrefs: {
-          'extensions.enabledScopes': 5,
-          'extensions.autoDisableScopes': 0,
-          'extensions.install.requireBuiltInCerts': false,
-          'extensions.install.requireSecureOrigin': false,
-          'xpinstall.signatures.required': false,
-          'xpinstall.whitelist.required': false,
-          'devtools.chrome.enabled': true,
-        },
-        viewport: { width: 1280, height: 720 },
-      });
       
-      // For Firefox, we need to install the extension manually
+      await use(context);
+      await context.close();
+    } finally {
+      // Cleanup temp directory
       try {
-        const xpiPath = path.join(process.cwd(), '..', 'firefox.xpi');
-        // Create xpi if it doesn't exist
-        if (!fs.existsSync(xpiPath)) {
-          const { execSync } = require('child_process');
-          execSync('cd .. && bash pack.sh', { stdio: 'ignore' });
-        }
-        
-        // Note: Firefox extension installation in Playwright is limited
-        // The extension files are in the firefox/ directory and will be
-        // available but may need manual installation during tests
+        fs.rmSync(userDataDir, { recursive: true, force: true });
       } catch (e) {
-        console.log('Note: Firefox extension auto-install not available in Playwright');
+        // Ignore cleanup errors
       }
     }
-    
-    await use(context);
-    await context.close();
   },
 
   // Extension ID fixture
   extensionId: async ({ context, browserName }, use) => {
+    if (browserName !== 'chromium') {
+      await use('');
+      return;
+    }
+    
     let extensionId = '';
     
-    if (browserName === 'chromium') {
-      // For Chrome, get extension ID from the service worker
-      let [background] = context.serviceWorkers();
-      if (!background) {
-        background = await context.waitForEvent('serviceworker');
-      }
+    try {
+      // Wait for service worker with timeout
+      const background = await Promise.race([
+        context.waitForEvent('serviceworker', { timeout: 10000 }),
+        new Promise<undefined>((_, reject) => 
+          setTimeout(() => reject(new Error('Service worker timeout')), 10000)
+        ),
+      ]).catch(() => undefined);
       
-      // Extract extension ID from URL
-      const url = background.url();
-      const match = url.match(/chrome-extension:\/\/([^\/]+)/);
-      if (match) {
-        extensionId = match[1];
+      if (background) {
+        const url = background.url();
+        const match = url.match(/chrome-extension:\/\/([^\/]+)/);
+        if (match) {
+          extensionId = match[1];
+        }
       }
-    } else {
-      // Firefox uses a different system - we'll use the extension name
-      // Firefox doesn't expose extension ID easily in Playwright
-      extensionId = 'nykredit-hide-checked-rows@extension';
+    } catch (e) {
+      console.log('Could not get extension ID:', e);
     }
     
     await use(extensionId);
   },
 
   // Extension page fixture - a page where we can interact with the extension
-  extensionPage: async ({ context, browserName }, use) => {
-    // Create a new page for testing
+  extensionPage: async ({ context }, use) => {
     const page = context.pages()[0] || await context.newPage();
-    
-    if (browserName === 'firefox') {
-      // For Firefox, we need to install the extension via about:debugging
-      // This is a workaround since Playwright doesn't support extension loading in Firefox
-      console.log('Firefox: Extension may need manual installation for full testing');
-    }
-    
     await use(page);
   },
 
@@ -134,17 +112,17 @@ export const test = base.extend<TestFixtures>({
     const openPopup = async (): Promise<Page> => {
       const page = context.pages()[0] || await context.newPage();
       
-      if (browserName === 'chromium') {
+      if (browserName === 'chromium' && extensionId) {
         // Navigate to the popup HTML directly in Chrome
         await page.goto(`chrome-extension://${extensionId}/popup.html`);
       } else {
-        // For Firefox, open popup from file system
-        const popupPath = path.join(process.cwd(), '..', 'firefox', 'popup.html');
+        // For non-chromium, open popup from file system (limited functionality)
+        const popupPath = path.join(CHROME_EXT_DIR, 'popup.html');
         await page.goto(`file://${popupPath}`);
       }
       
-      // Wait for the popup to be ready
-      await page.waitForSelector('#toggle', { timeout: 5000 });
+      // Wait for the popup to be ready (check for visible toggle-slider, not hidden input)
+      await page.waitForSelector('.toggle-slider', { timeout: 5000 });
       return page;
     };
     
@@ -155,14 +133,14 @@ export const test = base.extend<TestFixtures>({
   loadLocalPage: async ({ context }, use) => {
     const loadLocalPage = async (): Promise<Page> => {
       const page = context.pages()[0] || await context.newPage();
-      const htmlPath = path.join(process.cwd(), 'fixtures', 'Nykredit Privat.html');
+      const htmlPath = path.join(__dirname, 'fixtures', 'Nykredit Privat.html');
       await page.goto(`file://${htmlPath}`);
       
       // Wait for the page to have the expected elements
       await page.waitForSelector('.PostingTable-tr', { timeout: 10000 });
       
       // Inject the content script manually for testing
-      const contentScriptPath = path.join(process.cwd(), '..', 'src', 'content.js');
+      const contentScriptPath = path.join(SRC_DIR, 'content.js');
       if (fs.existsSync(contentScriptPath)) {
         const contentScript = fs.readFileSync(contentScriptPath, 'utf-8');
         

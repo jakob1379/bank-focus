@@ -1,5 +1,4 @@
 import { test, expect } from './fixtures';
-import path from 'path';
 
 test.describe('Nykredit Extension', () => {
   
@@ -8,9 +7,13 @@ test.describe('Nykredit Extension', () => {
     test('popup opens and displays toggle switch', async ({ openPopup }) => {
       const popup = await openPopup();
       
-      // Check that the toggle exists
-      const toggle = popup.locator('#toggle');
-      await expect(toggle).toBeVisible();
+      // Check that the toggle slider is visible (the visual toggle, not the hidden input)
+      const toggleSlider = popup.locator('.toggle-slider');
+      await expect(toggleSlider).toBeVisible();
+      
+      // Check that the hidden toggle input exists
+      const toggleInput = popup.locator('#toggle');
+      await expect(toggleInput).toBeAttached();
       
       // Check that the status text is visible
       const statusText = popup.locator('#status-text');
@@ -25,27 +28,28 @@ test.describe('Nykredit Extension', () => {
     test('toggle switch enables and disables extension', async ({ openPopup }) => {
       const popup = await openPopup();
       
-      const toggle = popup.locator('#toggle');
+      const toggleSlider = popup.locator('.toggle-slider');
+      const toggleInput = popup.locator('#toggle');
       const statusText = popup.locator('#status-text');
       const statusDot = popup.locator('#status-dot');
       
       // Initially unchecked
-      await expect(toggle).not.toBeChecked();
+      await expect(toggleInput).not.toBeChecked();
       await expect(statusText).toHaveText('Viser alle posteringer');
       
-      // Click to enable
-      await toggle.click();
+      // Click the slider to enable (click on the visible toggle-slider)
+      await toggleSlider.click();
       
       // Should be checked and show active status
-      await expect(toggle).toBeChecked();
+      await expect(toggleInput).toBeChecked();
       await expect(statusText).toHaveText('Skjuler afstemte posteringer');
       await expect(statusDot).toHaveClass(/active/);
       
       // Click again to disable
-      await toggle.click();
+      await toggleSlider.click();
       
       // Should be unchecked and show inactive status
-      await expect(toggle).not.toBeChecked();
+      await expect(toggleInput).not.toBeChecked();
       await expect(statusText).toHaveText('Viser alle posteringer');
       await expect(statusDot).not.toHaveClass(/active/);
     });
@@ -70,7 +74,7 @@ test.describe('Nykredit Extension', () => {
 
   test.describe('Content Script', () => {
     
-    test('hides checked rows when enabled', async ({ loadLocalPage, browserName }) => {
+    test('hides checked rows when enabled', async ({ loadLocalPage }) => {
       const page = await loadLocalPage();
       
       // Wait for the page to be fully loaded with PostingTable rows
@@ -100,9 +104,6 @@ test.describe('Nykredit Extension', () => {
       
       // Wait a bit for the DOM to update
       await page.waitForTimeout(500);
-      
-      // Check that checked rows are now hidden
-      const visibleRows = page.locator('.PostingTable-tr[style*="display: none"], .PostingTable-tr:not([style*="display: none"])');
       
       // Verify that checked rows have display: none
       for (let i = 0; i < checkedCount; i++) {
@@ -191,28 +192,25 @@ test.describe('Nykredit Extension', () => {
 
   test.describe('Integration', () => {
     
-    test('toggle in popup affects content script', async ({ loadLocalPage, openPopup, browserName }) => {
-      // This test is Chrome-specific since Firefox extension loading is limited in Playwright
-      test.skip(browserName === 'firefox', 'Extension messaging test is Chrome-only');
-      
+    test('toggle in popup affects content script', async ({ loadLocalPage, openPopup }) => {
       const page = await loadLocalPage();
       const popup = await openPopup();
       
       // Wait for both pages to be ready
       await page.waitForSelector('.PostingTable-tr', { timeout: 10000 });
-      await popup.waitForSelector('#toggle');
+      await popup.waitForSelector('.toggle-slider');
       
       const rows = page.locator('.PostingTable-tr');
       const count = await rows.count();
       
       test.skip(count === 0, 'No rows found');
       
-      // Enable via popup toggle
-      const toggle = popup.locator('#toggle');
-      await toggle.click();
+      // Enable via popup toggle (click on the visible slider)
+      const toggleSlider = popup.locator('.toggle-slider');
+      await toggleSlider.click();
       
-      // Wait for storage to update and content script to respond
-      await page.waitForTimeout(1000);
+      // Wait for storage to update
+      await popup.waitForTimeout(500);
       
       // Check that extension state is stored
       const isEnabled = await popup.evaluate(() => {

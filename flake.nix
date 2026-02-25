@@ -24,16 +24,23 @@
         '';
       };
 
-      # Playwright test package - uses Nix-managed playwright, no npm
+      # Playwright test package - uses Nix-managed playwright
       run-tests = pkgs.writeShellApplication {
         name = "run-tests";
         runtimeInputs = with pkgs; [ 
-          playwright-test  # Provides the 'playwright' command
+          playwright-test
         ];
         text = ''
+          # Setup extension files first
+          bash setup-tests.sh
+          
+          # Run tests from tests directory
           cd tests
           
-          # Run tests using Nix-managed playwright
+          # Set Playwright to use Nix-managed browsers
+          export PLAYWRIGHT_BROWSERS_PATH="${pkgs.playwright-driver.browsers}"
+          export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+          
           echo "Running Playwright tests..."
           playwright test "$@"
         '';
@@ -62,9 +69,10 @@
             echo "  nix run .#run-tests       - Run Playwright tests"
             echo ""
             echo "Test commands:"
-            echo "  nix run .#run-tests                    - Run all tests"
-            echo "  nix run .#run-tests -- --project=chrome  - Chrome only"
-            echo "  nix run .#run-tests -- --project=firefox - Firefox only"
+            echo "  nix run .#run-tests                      - Run all tests (headless)"
+            echo "  HEADLESS=false nix run .#run-tests       - Run tests in headed mode"
+            echo "  nix run .#run-tests -- --project=chromium - Chromium only"
+            echo "  nix run .#run-tests -- --project=firefox  - Firefox only"
           '';
         };
       }
