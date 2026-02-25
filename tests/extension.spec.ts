@@ -355,7 +355,10 @@ test.describe('Nykredit Extension', () => {
 
   test.describe('Integration', () => {
 
-    test('toggle in popup affects content script', async ({ page, openPopup }) => {
+    test('toggle in popup affects content script', async ({ page, openPopup, browserName }) => {
+      // Firefox doesn't support extension loading via CLI flags in Playwright
+      // Skip this test for Firefox as we can't properly test extension integration
+      test.skip(browserName === 'firefox', 'Extension integration not supported in Firefox');
       // Setup content page
       const htmlPath = path.join(__dirname, 'fixtures', 'Nykredit Privat.html');
       await page.goto(`file://${htmlPath}`);

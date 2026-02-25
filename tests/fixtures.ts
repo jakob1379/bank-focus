@@ -1,4 +1,4 @@
-import { test as base, chromium, type BrowserContext, type Page } from '@playwright/test';
+import { test as base, chromium, firefox, type BrowserContext, type Page, type Browser } from '@playwright/test';
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
@@ -28,16 +28,24 @@ const isHeadless = process.env.HEADLESS === 'true';
 
 export const test = base.extend<TestFixtures>({
   // Override context fixture to load extension
-  context: async ({ browserName }, use) => {
-    if (browserName !== 'chromium') {
-      // For non-chromium browsers, use default context
-      const browser = await chromium.launch({ headless: isHeadless });
-      const context = await browser.newContext({
+  context: async ({ browserName, browser: baseBrowser }, use) => {
+    if (browserName === 'firefox') {
+      // For Firefox, use the base browser context (extensions not supported via CLI)
+      const context = await baseBrowser.newContext({
         viewport: { width: 1280, height: 720 },
       });
       await use(context);
       await context.close();
-      await browser.close();
+      return;
+    }
+    
+    if (browserName !== 'chromium') {
+      // For other non-chromium browsers, use default context
+      const context = await baseBrowser.newContext({
+        viewport: { width: 1280, height: 720 },
+      });
+      await use(context);
+      await context.close();
       return;
     }
     
@@ -122,6 +130,35 @@ export const test = base.extend<TestFixtures>({
         // For non-chromium, open popup from file system (limited functionality)
         const popupPath = path.join(CHROME_EXT_DIR, 'popup.html');
         await page.goto(`file://${popupPath}`);
+        
+        // Mock browser API for Firefox/non-extension context
+        if (browserName === 'firefox') {
+          await page.addInitScript(`
+            if (typeof browser === 'undefined' && typeof chrome === 'undefined') {
+              const mockStorage = { hideEnabled: false };
+              window.browser = {
+                storage: {
+                  local: {
+                    get: (key) => Promise.resolve({ [key]: mockStorage[key] }),
+                    set: (obj) => {
+                      Object.assign(mockStorage, obj);
+                      return Promise.resolve();
+                    }
+                  }
+                },
+                runtime: {
+                  onMessage: { addListener: () => {} },
+                  sendMessage: () => Promise.resolve()
+                },
+                tabs: {
+                  query: () => Promise.resolve([{id: 1}]),
+                  sendMessage: () => Promise.resolve()
+                }
+              };
+              window.chrome = window.browser;
+            }
+          `);
+        }
       }
       
       // Wait for the popup to be ready (check for visible toggle-slider, not hidden input)
