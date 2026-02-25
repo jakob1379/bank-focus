@@ -30,8 +30,6 @@
         runtimeInputs = with pkgs; [ 
           nodejs 
           playwright-driver
-          chromium
-          firefox
         ];
         text = ''
           export PLAYWRIGHT_BROWSERS_PATH="${pkgs.playwright-driver.browsers}"
@@ -64,8 +62,6 @@
             zip
             nodejs
             playwright-driver
-            chromium
-            firefox
           ];
           
           shellHook = ''
