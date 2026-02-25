@@ -24,11 +24,10 @@
         '';
       };
 
-      # Playwright test package
+      # Playwright test package - uses Nix-managed playwright, no npm
       playwright-test = pkgs.writeShellApplication {
         name = "playwright-test";
         runtimeInputs = with pkgs; [ 
-          nodejs 
           playwright-driver
         ];
         text = ''
@@ -37,15 +36,9 @@
           
           cd tests
           
-          # Install dependencies if needed
-          if [ ! -d "node_modules" ]; then
-            echo "Installing npm dependencies..."
-            npm install
-          fi
-          
-          # Run tests
+          # Run tests using Nix-managed playwright
           echo "Running Playwright tests..."
-          npx playwright test "$@"
+          playwright test "$@"
         '';
       };
     in
@@ -60,7 +53,6 @@
         devShell = pkgs.mkShell {
           buildInputs = with pkgs; [
             zip
-            nodejs
             playwright-driver
           ];
           
@@ -75,9 +67,10 @@
             echo "  nix build .#firefox       - Build Firefox extension"
             echo "  nix run .#playwright-test - Run Playwright tests"
             echo ""
-            echo "Manual test commands:"
-            echo "  cd tests && npm install   - Install test dependencies"
-            echo "  cd tests && npm test      - Run tests"
+            echo "Test commands:"
+            echo "  cd tests && playwright test       - Run all tests"
+            echo "  cd tests && playwright test --project=chrome  - Chrome only"
+            echo "  cd tests && playwright test --project=firefox - Firefox only"
           '';
         };
       }

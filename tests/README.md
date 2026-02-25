@@ -1,6 +1,6 @@
 # Nykredit Extension Playwright Tests
 
-Headed browser extension tests for both Chrome and Firefox.
+Headed browser extension tests for both Chrome and Firefox using Nix-managed Playwright.
 
 ## Setup
 
@@ -12,30 +12,29 @@ nix run .#playwright-test
 
 # Or manually
 cd tests
-npm install
-npx playwright test
+playwright test
 ```
 
 ## Running Tests
 
 ### Run all tests (both browsers)
 ```bash
-npm test
+playwright test
 ```
 
 ### Run Chrome only
 ```bash
-npm run test:chrome
+playwright test --project=chrome
 ```
 
 ### Run Firefox only
 ```bash
-npm run test:firefox
+playwright test --project=firefox
 ```
 
 ### Debug mode (headed with slow motion)
 ```bash
-npm run test:debug
+playwright test --headed --timeout=0
 ```
 
 ## Test Structure
@@ -51,3 +50,4 @@ npm run test:debug
 - Chrome loads the extension automatically
 - Firefox has limited extension support in Playwright - tests mock the browser APIs
 - The content script is manually injected for file:// URLs with mocked browser APIs
+- No npm dependencies - Playwright is managed entirely by Nix
