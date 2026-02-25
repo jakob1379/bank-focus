@@ -40,8 +40,13 @@ test.describe('Nykredit Extension', () => {
       // Click the slider to enable (click on the visible toggle-slider)
       await toggleSlider.click();
       
-      // Should be checked and show active status
+      // Wait for toggle state to update
       await expect(toggleInput).toBeChecked();
+      
+      // Wait a moment for storage and UI to update
+      await popup.waitForTimeout(300);
+      
+      // Should show active status
       await expect(statusText).toHaveText('Skjuler afstemte posteringer');
       await expect(statusDot).toHaveClass(/active/);
       
@@ -77,8 +82,8 @@ test.describe('Nykredit Extension', () => {
     test('hides checked rows when enabled', async ({ loadLocalPage }) => {
       const page = await loadLocalPage();
       
-      // Wait for the page to be fully loaded with PostingTable rows
-      await page.waitForSelector('.PostingTable-tr', { timeout: 10000 });
+      // Wait for the page to be fully loaded with PostingTable rows (just check existence, not visibility)
+      await page.waitForSelector('.PostingTable-tr', { state: 'attached', timeout: 10000 });
       
       // Get all rows
       const rows = page.locator('.PostingTable-tr');
@@ -117,8 +122,8 @@ test.describe('Nykredit Extension', () => {
     test('shows all rows when disabled after being enabled', async ({ loadLocalPage }) => {
       const page = await loadLocalPage();
       
-      // Wait for the page to be fully loaded
-      await page.waitForSelector('.PostingTable-tr', { timeout: 10000 });
+      // Wait for the page to be fully loaded (check existence, not visibility)
+      await page.waitForSelector('.PostingTable-tr', { state: 'attached', timeout: 10000 });
       
       const rows = page.locator('.PostingTable-tr');
       const initialCount = await rows.count();

@@ -136,8 +136,8 @@ export const test = base.extend<TestFixtures>({
       const htmlPath = path.join(__dirname, 'fixtures', 'Nykredit Privat.html');
       await page.goto(`file://${htmlPath}`);
       
-      // Wait for the page to have the expected elements
-      await page.waitForSelector('.PostingTable-tr', { timeout: 10000 });
+      // Wait for the page to have the expected elements (check existence, not visibility)
+      await page.waitForSelector('.PostingTable-tr', { state: 'attached', timeout: 10000 });
       
       // Inject the content script manually for testing
       const contentScriptPath = path.join(SRC_DIR, 'content.js');
