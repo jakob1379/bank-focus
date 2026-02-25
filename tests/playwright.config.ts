@@ -15,6 +15,12 @@ export default defineConfig({
   // Global timeout for each test
   timeout: 60000,
   
+  // Run tests in parallel (4 workers in CI, auto-detect locally)
+  workers: process.env.CI ? 4 : undefined,
+  
+  // Fully parallel mode - tests within a file run in parallel too
+  fullyParallel: true,
+  
   // Retry configuration
   retries: process.env.CI ? 2 : 0,
   

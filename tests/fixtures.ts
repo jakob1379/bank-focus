@@ -23,12 +23,15 @@ export type TestFixtures = {
   loadLocalPage: () => Promise<Page>;
 };
 
+// Detect headless mode from env var
+const isHeadless = process.env.HEADLESS === 'true';
+
 export const test = base.extend<TestFixtures>({
   // Override context fixture to load extension
   context: async ({ browserName }, use) => {
     if (browserName !== 'chromium') {
       // For non-chromium browsers, use default context
-      const browser = await chromium.launch({ headless: false });
+      const browser = await chromium.launch({ headless: isHeadless });
       const context = await browser.newContext({
         viewport: { width: 1280, height: 720 },
       });
@@ -44,7 +47,7 @@ export const test = base.extend<TestFixtures>({
     
     try {
       const context = await chromium.launchPersistentContext(userDataDir, {
-        headless: false,  // Extensions require headed mode
+        headless: isHeadless,
         args: [
           `--disable-extensions-except=${CHROME_EXT_DIR}`,
           `--load-extension=${CHROME_EXT_DIR}`,
