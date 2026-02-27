@@ -81,17 +81,8 @@
           run-tests = run-tests;
         };
 
-        apps = {
-          act = utils.lib.mkApp {
-            drv = pkgs.act;
-          };
-          prek = utils.lib.mkApp {
-            drv = pkgs.prek;
-          };
-        };
-
-        devShell = pkgs.mkShell {
-          buildInputs = with pkgs; [
+        devShells.default = pkgs.mkShell {
+          packages = with pkgs; [
             zip
             playwright-test
             act
