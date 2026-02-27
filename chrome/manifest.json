@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Hide Checked Rows",
-  "version": "1.0",
-  "description": "Focus on what needs your attention by hiding already-reconciled transactions from your account overview",
+  "name": "Fokus for Nykredit",
+  "version": "2.0",
+  "description": "Hide checked transactions in Nykredit Netbank for a clearer view. Not affiliated with Nykredit A/S.",
   "permissions": ["storage", "activeTab"],
   "host_permissions": ["https://netbank.nykredit.dk/*"],
   "content_scripts": [{

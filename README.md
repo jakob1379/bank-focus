@@ -1,21 +1,28 @@
-# Nykredit Extension
+# Focus for Nykredit
 
-Focus on what needs your attention by hiding already-reconciled transactions from your account overview.
+**Not affiliated with, endorsed by, or produced by Nykredit A/S.**
+
+A browser extension to help you focus on what needs your attention by hiding already-reconciled transactions from your Nykredit account overview.
 
 ## What it does
 
 Nykredit netbank shows all transactions in one list—checked and unchecked mixed together. When you have many reconciled items, it's hard to see what's actually left to handle.
 
-This extension adds a simple toggle to your browser. When enabled, it hides all checked transactions so only the unchecked ones remain visible. You get a clear view of what still needs attention without scrolling through pages of already-handled items.
+This extension adds a simple filter control in your browser toolbar so you can switch between:
 
-Toggle it on when you need focus. Toggle it off when you want to see everything again.
+- Only unchecked transactions
+- Only checked transactions
+- All transactions
+
+You get a clear view of what still needs attention without scrolling through pages of already-handled items.
 
 ## Features
 
-- Hides checked/reconciled transactions from view
-- Shows only unchecked items for better focus
-- Works with a single click in the browser toolbar
+- Three filter modes: unchecked only, checked only, or all
+- Gradual hide behavior when a row changes state so updates are easy to track
+- Works with a single click in the browser toolbar popup
 - No data leaves your browser
+- No data collection whatsoever
 
 ## Build
 
@@ -74,7 +81,7 @@ Playwright and browsers are managed entirely by Nix - no npm install needed.
 1. Open `chrome://extensions` in Chrome
 2. Enable "Developer mode"
 3. Click "Load unpacked"
-4. Select the extracted `.zip` from `./result/`
+4. Select the unpacked extension directory
 
 ## Good for
 

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <!-- Background: Nykredit blue -->
+  <circle cx="64" cy="64" r="60" fill="#00205B"/>
+  
+  <!-- Unchecked box being blocked/hidden (strikethrough) -->
+  <rect x="28" y="32" width="32" height="32" fill="none" stroke="#FFFFFF" stroke-width="9.6" rx="4"/>
+  
+  <!-- Slash through it = BLOCKED -->
+  <line x1="24" y1="24" x2="64" y2="64" stroke="#FF4444" stroke-width="12" stroke-linecap="round"/>
+  
+  <!-- Second row visible (checked) -->
+  <path d="M32 84 L40 92 L56 76" fill="none" stroke="#FFFFFF" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <line x1="72" y1="80" x2="104" y2="80" stroke="#FFFFFF" stroke-width="8" stroke-linecap="round" opacity="0.6"/>
+</svg>
