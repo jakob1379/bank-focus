@@ -1,0 +1,150 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [chromium, firefox]
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@main
+
+      - name: Setup Nix cache
+        uses: DeterminateSystems/magic-nix-cache-action@main
+
+      - name: Run tests
+        run: nix run .#run-tests -- --project=${{ matrix.project }}
+        env:
+          HEADLESS: true
+
+  release:
+    name: Build, Release, and Publish
+    needs: test
+    runs-on: ubuntu-latest
+    env:
+      FIREFOX_ISSUER: ${{ secrets.FIREFOX_ISSUER }}
+      FIREFOX_SECRET: ${{ secrets.FIREFOX_SECRET }}
+      CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
+      CHROME_CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
+      CHROME_REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
+      CHROME_EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@main
+
+      - name: Setup Nix cache
+        uses: DeterminateSystems/magic-nix-cache-action@main
+
+      - name: Validate tag and manifest versions
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import re
+          import sys
+
+          tag = os.environ["RELEASE_TAG"]
+          if not re.match(r"^v\d+\.\d+\.\d+$", tag):
+              print(f"Tag '{tag}' must follow v<major>.<minor>.<patch>")
+              sys.exit(1)
+
+          tag_version = tag[1:]
+          with open("chrome/manifest.json", "r", encoding="utf-8") as f:
+              chrome_version = json.load(f)["version"]
+          with open("firefox/manifest.json", "r", encoding="utf-8") as f:
+              firefox_version = json.load(f)["version"]
+
+          if chrome_version != firefox_version:
+              print(
+                  "Chrome and Firefox manifest versions differ: "
+                  f"{chrome_version} != {firefox_version}"
+              )
+              sys.exit(1)
+
+          if chrome_version != tag_version:
+              print(
+                  "Manifest version must match tag version: "
+                  f"manifest={chrome_version}, tag={tag_version}"
+              )
+              sys.exit(1)
+
+          print(f"Validated release version: {tag_version}")
+          PY
+
+      - name: Pack extensions
+        run: nix run .#pack
+
+      - name: Archive source code
+        run: git archive --format zip --output source.zip HEAD
+
+      - name: Rename packages with version
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          VERSION="${RELEASE_TAG#v}"
+          mv chrome.zip nykredit-extension-${VERSION}-chrome.zip
+          mv firefox.xpi nykredit-extension-${VERSION}-firefox.xpi
+          mv source.zip nykredit-extension-${VERSION}-source.zip
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Release ${{ github.ref_name }}
+          files: |
+            nykredit-extension-*-chrome.zip
+            nykredit-extension-*-firefox.xpi
+            nykredit-extension-*-source.zip
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish to Firefox Add-ons
+        if: ${{ env.FIREFOX_ISSUER != '' && env.FIREFOX_SECRET != '' }}
+        uses: wdzeng/firefox-addon@v1
+        with:
+          addon-guid: fokusfornykredit@jgalabs.dk
+          xpi-path: nykredit-extension-*-firefox.xpi
+          source-file-path: nykredit-extension-*-source.zip
+          jwt-issuer: ${{ env.FIREFOX_ISSUER }}
+          jwt-secret: ${{ env.FIREFOX_SECRET }}
+
+      - name: Skip Firefox publish (missing secrets)
+        if: ${{ env.FIREFOX_ISSUER == '' || env.FIREFOX_SECRET == '' }}
+        run: |
+          echo "Firefox publish skipped: set FIREFOX_ISSUER and FIREFOX_SECRET repository secrets."
+
+      - name: Publish to Chrome Web Store
+        if: ${{ env.CHROME_CLIENT_ID != '' && env.CHROME_CLIENT_SECRET != '' && env.CHROME_REFRESH_TOKEN != '' && env.CHROME_EXTENSION_ID != '' }}
+        uses: wdzeng/chrome-extension@v1
+        with:
+          extension-id: ${{ env.CHROME_EXTENSION_ID }}
+          zip-path: nykredit-extension-*-chrome.zip
+          client-id: ${{ env.CHROME_CLIENT_ID }}
+          client-secret: ${{ env.CHROME_CLIENT_SECRET }}
+          refresh-token: ${{ env.CHROME_REFRESH_TOKEN }}
+
+      - name: Skip Chrome publish (missing secrets)
+        if: ${{ env.CHROME_CLIENT_ID == '' || env.CHROME_CLIENT_SECRET == '' || env.CHROME_REFRESH_TOKEN == '' || env.CHROME_EXTENSION_ID == '' }}
+        run: |
+          echo "Chrome publish skipped: set CHROME_CLIENT_ID, CHROME_CLIENT_SECRET, CHROME_REFRESH_TOKEN, and CHROME_EXTENSION_ID secrets."

@@ -76,21 +76,17 @@
           firefox = mkExtension "nykredit-extension-firefox" "firefox.xpi";
           default = self.packages.${system}.firefox;
           act = pkgs.act;
+          prek = pkgs.prek;
           pack = pack;
           run-tests = run-tests;
         };
 
-        apps = {
-          act = utils.lib.mkApp {
-            drv = pkgs.act;
-          };
-        };
-
-        devShell = pkgs.mkShell {
-          buildInputs = with pkgs; [
+        devShells.default = pkgs.mkShell {
+          packages = with pkgs; [
             zip
             playwright-test
             act
+            prek
           ];
 
           shellHook = ''
@@ -102,7 +98,10 @@
             echo "  nix run .#pack            - Pack both browser artifacts"
             echo "  nix run .#run-tests       - Run Playwright tests"
             echo "  nix run .#act -- -j test  - Run GitHub Actions locally"
+            echo "  nix run .#prek -- run --all-files"
+            echo "  nix run .#prek -- autoupdate"
             echo "  act                       - Run GitHub Actions locally"
+            echo "  prek                      - Run pre-commit hooks"
             echo ""
             echo "Test commands:"
             echo "  nix run .#run-tests                      - Run all tests (headless)"
