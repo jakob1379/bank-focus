@@ -88,6 +88,10 @@ This repository includes a release workflow at `.github/workflows/release.yml` t
 
 ### Required repository secrets
 
+Add these at:
+
+`GitHub repo -> Settings -> Secrets and variables -> Actions -> Repository secrets`
+
 Firefox publish:
 
 - `FIREFOX_ISSUER`
@@ -99,6 +103,28 @@ Chrome publish (optional until you create a Chrome Web Store account):
 - `CHROME_CLIENT_SECRET`
 - `CHROME_REFRESH_TOKEN`
 - `CHROME_EXTENSION_ID`
+
+### Required repository settings
+
+1. `GitHub repo -> Settings -> Actions -> General -> Workflow permissions`
+   - set to **Read and write permissions** (needed for creating GitHub releases)
+2. `GitHub repo -> Settings -> Actions -> General -> Allow GitHub Actions`
+   - allow Marketplace actions used by this repo (`softprops/action-gh-release`, `wdzeng/firefox-addon`, `wdzeng/chrome-extension`)
+
+### How to get each secret
+
+- `FIREFOX_ISSUER`, `FIREFOX_SECRET`
+  - source: Firefox Add-ons Developer Hub API credentials (JWT)
+  - create keys in your AMO developer account, then copy issuer + secret into GitHub secrets
+- `CHROME_EXTENSION_ID`
+  - source: Chrome Web Store listing (item ID from URL)
+- `CHROME_CLIENT_ID`, `CHROME_CLIENT_SECRET`
+  - source: Google Cloud OAuth client credentials for Chrome Web Store API
+- `CHROME_REFRESH_TOKEN`
+  - source: OAuth consent flow for that client with scope:
+    `https://www.googleapis.com/auth/chromewebstore`
+
+If Chrome or Firefox secrets are missing, the workflow still creates a GitHub release and only skips store publishing.
 
 ### Release process
 
