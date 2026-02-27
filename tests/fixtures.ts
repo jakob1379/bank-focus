@@ -11,6 +11,7 @@ const SRC_DIR = path.resolve(__dirname, '..', 'src');
 declare global {
   interface Window {
     __messageListener?: (message: { action: string }) => void;
+    __isContentPage?: boolean;
   }
 }
 
@@ -122,47 +123,71 @@ export const test = base.extend<TestFixtures>({
   openPopup: async ({ context, extensionId, browserName }, use) => {
     const openPopup = async (): Promise<Page> => {
       const page = context.pages()[0] || await context.newPage();
+
+      const browserMockScript = `
+        if (typeof browser === 'undefined' && typeof chrome === 'undefined') {
+          const mockStorage = { hideEnabled: false, filterMode: 'all' };
+          const normalizeGetResult = (key) => {
+            if (Array.isArray(key)) {
+              return key.reduce((acc, k) => {
+                acc[k] = mockStorage[k];
+                return acc;
+              }, {});
+            }
+            if (typeof key === 'string') {
+              return { [key]: mockStorage[key] };
+            }
+            if (key && typeof key === 'object') {
+              return Object.keys(key).reduce((acc, k) => {
+                acc[k] = mockStorage[k] ?? key[k];
+                return acc;
+              }, {});
+            }
+            return { ...mockStorage };
+          };
+
+          window.browser = {
+            storage: {
+              local: {
+                get: (key) => Promise.resolve(normalizeGetResult(key)),
+                set: (obj) => {
+                  Object.assign(mockStorage, obj);
+                  return Promise.resolve();
+                },
+                remove: (key) => {
+                  const keys = Array.isArray(key) ? key : [key];
+                  keys.forEach((k) => delete mockStorage[k]);
+                  return Promise.resolve();
+                }
+              }
+            },
+            runtime: {
+              onMessage: { addListener: () => {} },
+              sendMessage: () => Promise.resolve()
+            },
+            tabs: {
+              query: () => Promise.resolve([{ id: 1 }]),
+              sendMessage: () => Promise.resolve()
+            },
+            action: {
+              setIcon: () => Promise.resolve()
+            }
+          };
+          window.chrome = window.browser;
+        }
+      `;
       
       if (browserName === 'chromium' && extensionId) {
         // Navigate to the popup HTML directly in Chrome
         await page.goto(`chrome-extension://${extensionId}/popup.html`);
       } else {
-        // For non-chromium, open popup from file system (limited functionality)
+        // For non-chromium, open popup from file system with mocked extension APIs
+        await page.addInitScript(browserMockScript);
         const popupPath = path.join(CHROME_EXT_DIR, 'popup.html');
         await page.goto(`file://${popupPath}`);
-        
-        // Mock browser API for Firefox/non-extension context
-        if (browserName === 'firefox') {
-          await page.addInitScript(`
-            if (typeof browser === 'undefined' && typeof chrome === 'undefined') {
-              const mockStorage = { hideEnabled: false };
-              window.browser = {
-                storage: {
-                  local: {
-                    get: (key) => Promise.resolve({ [key]: mockStorage[key] }),
-                    set: (obj) => {
-                      Object.assign(mockStorage, obj);
-                      return Promise.resolve();
-                    }
-                  }
-                },
-                runtime: {
-                  onMessage: { addListener: () => {} },
-                  sendMessage: () => Promise.resolve()
-                },
-                tabs: {
-                  query: () => Promise.resolve([{id: 1}]),
-                  sendMessage: () => Promise.resolve()
-                }
-              };
-              window.chrome = window.browser;
-            }
-          `);
-        }
       }
       
-      // Wait for the popup to be ready (check for visible toggle-slider, not hidden input)
-      await page.waitForSelector('.toggle-slider', { timeout: 5000 });
+      await page.waitForSelector('.radio-group', { timeout: 5000 });
       return page;
     };
     
@@ -191,16 +216,43 @@ export const test = base.extend<TestFixtures>({
         
         // Mock the browser API for content script in file:// context
         // Also expose a function to enable/disable for integration testing
-        const mockBrowserAPI = `
-          if (typeof browser === 'undefined' && typeof chrome === 'undefined') {
-            window.browser = {
-              storage: {
-                local: {
-                  get: (key) => Promise.resolve({ hideEnabled: false }),
-                  set: (obj) => Promise.resolve()
-                }
-              },
-              runtime: {
+         const mockBrowserAPI = `
+           if (typeof browser === 'undefined' && typeof chrome === 'undefined') {
+             const mockStorage = { hideEnabled: false, filterMode: 'all' };
+             const normalizeGetResult = (key) => {
+               if (Array.isArray(key)) {
+                 return key.reduce((acc, k) => {
+                   acc[k] = mockStorage[k];
+                   return acc;
+                 }, {});
+               }
+               if (typeof key === 'string') {
+                 return { [key]: mockStorage[key] };
+               }
+               if (key && typeof key === 'object') {
+                 return Object.keys(key).reduce((acc, k) => {
+                   acc[k] = mockStorage[k] ?? key[k];
+                   return acc;
+                 }, {});
+               }
+               return { ...mockStorage };
+             };
+             window.browser = {
+               storage: {
+                 local: {
+                   get: (key) => Promise.resolve(normalizeGetResult(key)),
+                   set: (obj) => {
+                     Object.assign(mockStorage, obj);
+                     return Promise.resolve();
+                   },
+                   remove: (key) => {
+                     const keys = Array.isArray(key) ? key : [key];
+                     keys.forEach((k) => delete mockStorage[k]);
+                     return Promise.resolve();
+                   }
+                 }
+               },
+               runtime: {
                 onMessage: {
                   addListener: (fn) => {
                     window.__messageListener = fn;
@@ -208,12 +260,15 @@ export const test = base.extend<TestFixtures>({
                 },
                 sendMessage: () => Promise.resolve()
               },
-              tabs: {
-                query: () => Promise.resolve([{id: 1}]),
-                sendMessage: () => Promise.resolve()
-              }
-            };
-            window.chrome = window.browser;
+               tabs: {
+                 query: () => Promise.resolve([{id: 1}]),
+                 sendMessage: () => Promise.resolve()
+               },
+               action: {
+                 setIcon: () => Promise.resolve()
+               }
+             };
+             window.chrome = window.browser;
           }
         `;
         

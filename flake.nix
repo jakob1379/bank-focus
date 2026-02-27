@@ -24,6 +24,14 @@
         '';
       };
 
+      pack = pkgs.writeShellApplication {
+        name = "pack";
+        runtimeInputs = with pkgs; [ zip ];
+        text = ''
+          bash pack.sh
+        '';
+      };
+
       # Playwright test package - uses Nix-managed playwright
       run-tests = pkgs.writeShellApplication {
         name = "run-tests";
@@ -67,7 +75,15 @@
           chrome = mkExtension "nykredit-extension-chrome" "chrome.zip";
           firefox = mkExtension "nykredit-extension-firefox" "firefox.xpi";
           default = self.packages.${system}.firefox;
+          act = pkgs.act;
+          pack = pack;
           run-tests = run-tests;
+        };
+
+        apps = {
+          act = utils.lib.mkApp {
+            drv = pkgs.act;
+          };
         };
 
         devShell = pkgs.mkShell {
@@ -83,7 +99,9 @@
             echo "Available commands:"
             echo "  nix build .#chrome        - Build Chrome extension"
             echo "  nix build .#firefox       - Build Firefox extension"
+            echo "  nix run .#pack            - Pack both browser artifacts"
             echo "  nix run .#run-tests       - Run Playwright tests"
+            echo "  nix run .#act -- -j test  - Run GitHub Actions locally"
             echo "  act                       - Run GitHub Actions locally"
             echo ""
             echo "Test commands:"

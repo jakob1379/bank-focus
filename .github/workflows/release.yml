@@ -3,7 +3,7 @@ name: Release
 on:
   push:
     tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+'
+      - 'v*.*.*'
 
 permissions:
   contents: write
@@ -33,7 +33,7 @@ jobs:
           HEADLESS: true
 
   release:
-    name: Create Release
+    name: Build, Release, and Publish
     needs: test
     runs-on: ubuntu-latest
     
@@ -47,25 +47,97 @@ jobs:
       - name: Setup Nix cache
         uses: DeterminateSystems/magic-nix-cache-action@main
 
+      - name: Validate tag and manifest versions
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import re
+          import sys
+
+          tag = os.environ["RELEASE_TAG"]
+          if not re.match(r"^v\d+\.\d+\.\d+$", tag):
+              print(f"Tag '{tag}' must follow v<major>.<minor>.<patch>")
+              sys.exit(1)
+
+          tag_version = tag[1:]
+          with open("chrome/manifest.json", "r", encoding="utf-8") as f:
+              chrome_version = json.load(f)["version"]
+          with open("firefox/manifest.json", "r", encoding="utf-8") as f:
+              firefox_version = json.load(f)["version"]
+
+          if chrome_version != firefox_version:
+              print(
+                  "Chrome and Firefox manifest versions differ: "
+                  f"{chrome_version} != {firefox_version}"
+              )
+              sys.exit(1)
+
+          if chrome_version != tag_version:
+              print(
+                  "Manifest version must match tag version: "
+                  f"manifest={chrome_version}, tag={tag_version}"
+              )
+              sys.exit(1)
+
+          print(f"Validated release version: {tag_version}")
+          PY
+
       - name: Pack extensions
         run: nix run .#pack
 
-      - name: Get version from tag
-        id: get_version
-        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+      - name: Archive source code
+        run: git archive --format zip --output source.zip HEAD
 
       - name: Rename packages with version
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
         run: |
-          mv chrome.zip nykredit-extension-${{ steps.get_version.outputs.VERSION }}-chrome.zip
-          mv firefox.xpi nykredit-extension-${{ steps.get_version.outputs.VERSION }}-firefox.xpi
+          VERSION="${RELEASE_TAG#v}"
+          mv chrome.zip nykredit-extension-${VERSION}-chrome.zip
+          mv firefox.xpi nykredit-extension-${VERSION}-firefox.xpi
+          mv source.zip nykredit-extension-${VERSION}-source.zip
 
       - name: Create Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
-          name: Release ${{ steps.get_version.outputs.VERSION }}
+          name: Release ${{ github.ref_name }}
           files: |
             nykredit-extension-*-chrome.zip
             nykredit-extension-*-firefox.xpi
+            nykredit-extension-*-source.zip
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish to Firefox Add-ons
+        if: ${{ secrets.FIREFOX_ISSUER != '' && secrets.FIREFOX_SECRET != '' }}
+        uses: wdzeng/firefox-addon@v1
+        with:
+          addon-guid: fokusfornykredit@jgalabs.dk
+          xpi-path: nykredit-extension-*-firefox.xpi
+          source-file-path: nykredit-extension-*-source.zip
+          jwt-issuer: ${{ secrets.FIREFOX_ISSUER }}
+          jwt-secret: ${{ secrets.FIREFOX_SECRET }}
+
+      - name: Skip Firefox publish (missing secrets)
+        if: ${{ secrets.FIREFOX_ISSUER == '' || secrets.FIREFOX_SECRET == '' }}
+        run: |
+          echo "Firefox publish skipped: set FIREFOX_ISSUER and FIREFOX_SECRET repository secrets."
+
+      - name: Publish to Chrome Web Store
+        if: ${{ secrets.CHROME_CLIENT_ID != '' && secrets.CHROME_CLIENT_SECRET != '' && secrets.CHROME_REFRESH_TOKEN != '' && secrets.CHROME_EXTENSION_ID != '' }}
+        uses: wdzeng/chrome-extension@v1
+        with:
+          extension-id: ${{ secrets.CHROME_EXTENSION_ID }}
+          zip-path: nykredit-extension-*-chrome.zip
+          client-id: ${{ secrets.CHROME_CLIENT_ID }}
+          client-secret: ${{ secrets.CHROME_CLIENT_SECRET }}
+          refresh-token: ${{ secrets.CHROME_REFRESH_TOKEN }}
+
+      - name: Skip Chrome publish (missing secrets)
+        if: ${{ secrets.CHROME_CLIENT_ID == '' || secrets.CHROME_CLIENT_SECRET == '' || secrets.CHROME_REFRESH_TOKEN == '' || secrets.CHROME_EXTENSION_ID == '' }}
+        run: |
+          echo "Chrome publish skipped: set CHROME_CLIENT_ID, CHROME_CLIENT_SECRET, CHROME_REFRESH_TOKEN, and CHROME_EXTENSION_ID secrets."

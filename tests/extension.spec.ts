@@ -6,76 +6,48 @@ test.describe('Nykredit Extension', () => {
   
   test.describe('Popup UI', () => {
     
-    test('popup opens and displays toggle switch', async ({ openPopup }) => {
+    test('popup opens and displays filter controls', async ({ openPopup }) => {
       const popup = await openPopup();
       
-      // Check that the toggle slider is visible (the visual toggle, not the hidden input)
-      const toggleSlider = popup.locator('.toggle-slider');
-      await expect(toggleSlider).toBeVisible();
+      const radioGroup = popup.locator('.radio-group');
+      await expect(radioGroup).toBeVisible();
       
-      // Check that the hidden toggle input exists
-      const toggleInput = popup.locator('#toggle');
-      await expect(toggleInput).toBeAttached();
+      const filterInputs = popup.locator('input[name="filter"]');
+      await expect(filterInputs).toHaveCount(3);
       
-      // Check that the status text is visible
       const statusText = popup.locator('#status-text');
       await expect(statusText).toBeVisible();
-      await expect(statusText).toHaveText('Viser alle posteringer');
+      await expect(statusText).not.toHaveText('');
       
-      // Check that the status dot is not active initially
       const statusDot = popup.locator('#status-dot');
-      await expect(statusDot).not.toHaveClass(/active/);
+      await expect(statusDot).toBeVisible();
     });
 
-    test('toggle switch enables and disables extension', async ({ openPopup }) => {
+    test('changing filter mode updates popup state', async ({ openPopup }) => {
       const popup = await openPopup();
 
-      const toggleInput = popup.locator('#toggle');
+      const uncheckedOnlyInput = popup.locator('input[name="filter"][value="unchecked-only"]');
+      const checkedOnlyInput = popup.locator('input[name="filter"][value="checked-only"]');
+      const allInput = popup.locator('input[name="filter"][value="all"]');
       const statusText = popup.locator('#status-text');
       const statusDot = popup.locator('#status-dot');
 
-      // Wait for popup script to initialize (storage.get runs on load)
       await popup.waitForTimeout(500);
 
-      // Initially unchecked
-      await expect(toggleInput).not.toBeChecked();
+      await allInput.check();
+      await expect(allInput).toBeChecked({ timeout: 5000 });
       await expect(statusText).toHaveText('Viser alle posteringer');
+      await expect(statusDot).not.toHaveClass(/active/);
 
-      // Check the checkbox and manually call the update functions from popup.js
-      await popup.evaluate(() => {
-        const checkbox = document.getElementById('toggle') as HTMLInputElement;
-        const statusDot = document.getElementById('status-dot');
-        const statusText = document.getElementById('status-text');
-        
-        checkbox.checked = true;
-        
-        // Manually update the status (simulating what popup.js does)
-        if (statusDot) statusDot.classList.add('active');
-        if (statusText) statusText.textContent = 'Skjuler afstemte posteringer';
-      });
-
-      // Verify the UI updated
-      await expect(toggleInput).toBeChecked({ timeout: 5000 });
-      await expect(statusText).toHaveText('Skjuler afstemte posteringer', { timeout: 5000 });
+      await uncheckedOnlyInput.check();
+      await expect(uncheckedOnlyInput).toBeChecked({ timeout: 5000 });
+      await expect(statusText).toHaveText('Viser kun uafstemte posteringer', { timeout: 5000 });
       await expect(statusDot).toHaveClass(/active/, { timeout: 5000 });
 
-      // Uncheck via JavaScript
-      await popup.evaluate(() => {
-        const checkbox = document.getElementById('toggle') as HTMLInputElement;
-        const statusDot = document.getElementById('status-dot');
-        const statusText = document.getElementById('status-text');
-        
-        checkbox.checked = false;
-        
-        // Manually update the status
-        if (statusDot) statusDot.classList.remove('active');
-        if (statusText) statusText.textContent = 'Viser alle posteringer';
-      });
-
-      // Verify the UI updated back
-      await expect(toggleInput).not.toBeChecked({ timeout: 5000 });
-      await expect(statusText).toHaveText('Viser alle posteringer', { timeout: 5000 });
-      await expect(statusDot).not.toHaveClass(/active/, { timeout: 5000 });
+      await checkedOnlyInput.check();
+      await expect(checkedOnlyInput).toBeChecked({ timeout: 5000 });
+      await expect(statusText).toHaveText('Viser kun afstemte posteringer', { timeout: 5000 });
+      await expect(statusDot).toHaveClass(/active/, { timeout: 5000 });
     });
 
     test('popup shows correct title and description', async ({ openPopup }) => {
@@ -88,11 +60,13 @@ test.describe('Nykredit Extension', () => {
       
       // Check label text
       const labelText = popup.locator('.label-text');
-      await expect(labelText).toHaveText('Skjul afstemte posteringer');
+      await expect(labelText).toHaveText('Filtrer posteringer');
       
-      // Check description
-      const description = popup.locator('.label-description');
-      await expect(description).toHaveText('Vis kun uafstemte transaktioner');
+      await expect(popup.locator('.radio-label')).toHaveText([
+        'Kun uafstemte',
+        'Kun afstemte',
+        'Vis alle',
+      ]);
     });
   });
 
@@ -355,7 +329,7 @@ test.describe('Nykredit Extension', () => {
 
   test.describe('Integration', () => {
 
-    test('toggle in popup affects content script', async ({ page, openPopup, browserName }) => {
+    test('filter selection in popup affects content script', async ({ page, openPopup, browserName }) => {
       // Firefox doesn't support extension loading via CLI flags in Playwright
       // Skip this test for Firefox as we can't properly test extension integration
       test.skip(browserName === 'firefox', 'Extension integration not supported in Firefox');
@@ -384,20 +358,24 @@ test.describe('Nykredit Extension', () => {
           }
         });
 
-        // Setup enable function
-        (window as any).__enableExtension = () => {
+        // Setup filter function
+        (window as any).__applyFilter = (mode: string) => {
           const rows = document.querySelectorAll('.PostingTable-tr');
           rows.forEach(row => {
             const cb = row.querySelector('input[type="checkbox"]');
-            if (cb && (cb as HTMLInputElement).checked) {
+            if (!cb) return;
+            const isChecked = (cb as HTMLInputElement).checked;
+            if (mode === 'unchecked-only' && isChecked) {
               (row as HTMLElement).style.display = 'none';
+            } else {
+              (row as HTMLElement).style.display = '';
             }
           });
         };
 
-        (window as any).__messageListener = (msg: { action: string }) => {
-          if (msg.action === 'enable') {
-            (window as any).__enableExtension();
+        (window as any).__messageListener = (msg: { action: string; mode?: string }) => {
+          if (msg.action === 'setFilterMode') {
+            (window as any).__applyFilter(msg.mode || 'all');
           }
         };
       });
@@ -411,20 +389,17 @@ test.describe('Nykredit Extension', () => {
       const popup = await openPopup();
 
       // Wait for popup to be ready
-      await popup.waitForSelector('.toggle-slider');
+      await popup.waitForSelector('.radio-group');
 
-      // Enable via popup toggle - click the slider
-      const toggleSlider = popup.locator('.toggle-slider');
-      await toggleSlider.click({ force: true });
+      const uncheckedOnlyInput = popup.locator('input[name="filter"][value="unchecked-only"]');
+      await uncheckedOnlyInput.check({ force: true });
 
-      // Wait for toggle to be checked
-      const toggleInput = popup.locator('#toggle');
-      await expect(toggleInput).toBeChecked({ timeout: 5000 });
+      await expect(uncheckedOnlyInput).toBeChecked({ timeout: 5000 });
 
-      // Manually trigger content script enable (since popup can't send messages in test setup)
+      // Manually trigger content script filter apply (popup and fixture are isolated contexts)
       await page.evaluate(() => {
         if ((window as any).__messageListener) {
-          (window as any).__messageListener({ action: 'enable' });
+          (window as any).__messageListener({ action: 'setFilterMode', mode: 'unchecked-only' });
         }
       });
 
