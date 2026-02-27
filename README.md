@@ -1,21 +1,28 @@
-# Nykredit Extension
+# Focus for Nykredit
 
-Focus on what needs your attention by hiding already-reconciled transactions from your account overview.
+**Not affiliated with, endorsed by, or produced by Nykredit A/S.**
+
+A browser extension to help you focus on what needs your attention by hiding already-reconciled transactions from your Nykredit account overview.
 
 ## What it does
 
 Nykredit netbank shows all transactions in one list—checked and unchecked mixed together. When you have many reconciled items, it's hard to see what's actually left to handle.
 
-This extension adds a simple toggle to your browser. When enabled, it hides all checked transactions so only the unchecked ones remain visible. You get a clear view of what still needs attention without scrolling through pages of already-handled items.
+This extension adds a simple filter control in your browser toolbar so you can switch between:
 
-Toggle it on when you need focus. Toggle it off when you want to see everything again.
+- Only unchecked transactions
+- Only checked transactions
+- All transactions
+
+You get a clear view of what still needs attention without scrolling through pages of already-handled items.
 
 ## Features
 
-- Hides checked/reconciled transactions from view
-- Shows only unchecked items for better focus
-- Works with a single click in the browser toolbar
+- Three filter modes: unchecked only, checked only, or all
+- Gradual hide behavior when a row changes state so updates are easy to track
+- Works with a single click in the browser toolbar popup
 - No data leaves your browser
+- No data collection whatsoever
 
 ## Build
 
@@ -62,6 +69,49 @@ Tests run in headed mode so you can see the browser interactions. They verify:
 
 Playwright and browsers are managed entirely by Nix - no npm install needed.
 
+Run the GitHub Actions test workflow locally with `act`:
+
+```bash
+nix run .#act -- -j test -W .github/workflows/test.yml --matrix project:chromium
+nix run .#act -- -j test -W .github/workflows/test.yml --matrix project:firefox
+```
+
+## Automated releases
+
+This repository includes a release workflow at `.github/workflows/release.yml` that:
+
+- Runs browser tests for Chromium and Firefox
+- Builds `chrome.zip` and `firefox.xpi`
+- Creates a GitHub release and uploads build artifacts
+- Publishes to Firefox Add-ons when Firefox secrets are configured
+- Publishes to Chrome Web Store when Chrome secrets are configured
+
+### Required repository secrets
+
+Firefox publish:
+
+- `FIREFOX_ISSUER`
+- `FIREFOX_SECRET`
+
+Chrome publish (optional until you create a Chrome Web Store account):
+
+- `CHROME_CLIENT_ID`
+- `CHROME_CLIENT_SECRET`
+- `CHROME_REFRESH_TOKEN`
+- `CHROME_EXTENSION_ID`
+
+### Release process
+
+1. Make sure both `chrome/manifest.json` and `firefox/manifest.json` have the same version.
+2. Create and push a tag matching that version as `v<major>.<minor>.<patch>`.
+
+```bash
+git tag v2.0.0
+git push origin v2.0.0
+```
+
+The workflow validates that the tag version matches both manifest versions before publishing.
+
 ## Install
 
 ### Firefox
@@ -74,7 +124,7 @@ Playwright and browsers are managed entirely by Nix - no npm install needed.
 1. Open `chrome://extensions` in Chrome
 2. Enable "Developer mode"
 3. Click "Load unpacked"
-4. Select the extracted `.zip` from `./result/`
+4. Select the `chrome/` directory
 
 ## Good for
 

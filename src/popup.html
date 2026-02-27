@@ -12,7 +12,7 @@
 
     body {
       width: 280px;
-      padding: 20px 24px;
+      padding: 20px 20px;
       font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
       background: linear-gradient(180deg, #fafbfc 0%, #f5f6f8 100%);
       color: #1a1a2e;
@@ -62,11 +62,10 @@
       color: #1a1a2e;
     }
 
-    .toggle-wrapper {
+    .control-wrapper {
       display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
+      flex-direction: column;
+      gap: 10px;
     }
 
     .label-text {
@@ -77,92 +76,68 @@
       letter-spacing: -0.01em;
     }
 
-    .label-description {
-      font-size: 12px;
-      color: #6b7280;
-      margin-top: 3px;
-      font-weight: 400;
+    /* RADIO BUTTON GROUP */
+    .radio-group {
+      border: none;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
     }
 
-    /* Custom Toggle Switch */
-    .toggle {
+    .radio-option {
       position: relative;
-      width: 52px;
-      height: 30px;
+      cursor: pointer;
+    }
+
+    .radio-option input {
+      position: absolute;
+      opacity: 0;
+    }
+
+    .radio-control {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid #e5e7eb;
+      background: #ffffff;
+      transition: all 0.15s ease;
+    }
+
+    .radio-option:hover .radio-control {
+      border-color: #1e3a5f;
+      background: #f8fafc;
+    }
+
+    .radio-option input:checked + .radio-control {
+      border-color: #1e3a5f;
+      background: rgba(30, 58, 95, 0.06);
+    }
+
+    .radio-circle {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      border: 2px solid #9ca3af;
+      transition: all 0.15s ease;
       flex-shrink: 0;
     }
 
-    .toggle input {
-      opacity: 0;
-      width: 0;
-      height: 0;
-      position: absolute;
+    .radio-option input:checked + .radio-control .radio-circle {
+      border-color: #1e3a5f;
+      border-width: 5px;
     }
 
-    .toggle-slider {
-      position: absolute;
-      cursor: pointer;
-      inset: 0;
-      background: #e5e7eb;
-      border-radius: 30px;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      box-shadow: 
-        inset 0 2px 4px rgba(0, 0, 0, 0.08),
-        inset 0 1px 2px rgba(0, 0, 0, 0.04);
+    .radio-label {
+      font-size: 13px;
+      font-weight: 500;
+      color: #4b5563;
     }
 
-    .toggle-slider::before {
-      content: '';
-      position: absolute;
-      height: 24px;
-      width: 24px;
-      left: 3px;
-      bottom: 3px;
-      background: #ffffff;
-      border-radius: 50%;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      box-shadow: 
-        0 2px 6px rgba(0, 0, 0, 0.15),
-        0 1px 2px rgba(0, 0, 0, 0.1);
-    }
-
-    /* Checked State */
-    .toggle input:checked + .toggle-slider {
-      background: linear-gradient(135deg, #1e3a5f 0%, #0f2744 100%);
-      box-shadow: 
-        inset 0 2px 4px rgba(0, 0, 0, 0.2),
-        inset 0 1px 2px rgba(0, 0, 0, 0.1);
-    }
-
-    .toggle input:checked + .toggle-slider::before {
-      transform: translateX(22px);
-      box-shadow: 
-        0 2px 6px rgba(30, 58, 95, 0.25),
-        0 1px 2px rgba(0, 0, 0, 0.1);
-    }
-
-    /* Hover States */
-    .toggle:hover .toggle-slider {
-      background: #d1d5db;
-    }
-
-    .toggle input:checked:hover + .toggle-slider {
-      background: linear-gradient(135deg, #254670 0%, #152f52 100%);
-    }
-
-    /* Active/Press State */
-    .toggle-slider:active::before {
-      transform: scale(0.92);
-    }
-
-    .toggle input:checked + .toggle-slider:active::before {
-      transform: translateX(22px) scale(0.92);
-    }
-
-    /* Focus State for Accessibility */
-    .toggle input:focus-visible + .toggle-slider {
-      outline: 2px solid #1e3a5f;
-      outline-offset: 2px;
+    .radio-option input:checked + .radio-control .radio-label {
+      color: #1e3a5f;
+      font-weight: 600;
     }
 
     /* Status Indicator */
@@ -170,7 +145,7 @@
       display: flex;
       align-items: center;
       gap: 6px;
-      margin-top: 12px;
+      margin-top: 8px;
       padding-top: 12px;
       border-top: 1px solid rgba(0, 0, 0, 0.06);
     }
@@ -195,15 +170,6 @@
       text-transform: uppercase;
       letter-spacing: 0.03em;
     }
-
-    /* Footer */
-    .footer {
-      margin-top: 4px;
-      font-size: 11px;
-      color: #9ca3af;
-      text-align: center;
-      font-weight: 400;
-    }
   </style>
 </head>
 <body>
@@ -218,23 +184,46 @@
       <span class="title">Nykredit Extension</span>
     </div>
 
-    <div class="toggle-wrapper">
-      <div>
-        <div class="label-text">Skjul afstemte posteringer</div>
-        <div class="label-description">Vis kun uafstemte transaktioner</div>
-      </div>
-      <label class="toggle">
-        <input type="checkbox" id="toggle">
-        <span class="toggle-slider"></span>
-      </label>
+    <div class="control-wrapper">
+      <div class="label-text">Filtrer posteringer</div>
+      
+      <!-- RADIO BUTTON GROUP -->
+      <fieldset class="radio-group" aria-label="Filtrer posteringer">
+        
+        <!-- Option 1: Unchecked-only -->
+        <label class="radio-option">
+          <input type="radio" name="filter" value="unchecked-only" checked>
+          <span class="radio-control">
+            <span class="radio-circle"></span>
+            <span class="radio-label">Kun uafstemte</span>
+          </span>
+        </label>
+
+        <!-- Option 2: Checked-only -->
+        <label class="radio-option">
+          <input type="radio" name="filter" value="checked-only">
+          <span class="radio-control">
+            <span class="radio-circle"></span>
+            <span class="radio-label">Kun afstemte</span>
+          </span>
+        </label>
+
+        <!-- Option 3: All -->
+        <label class="radio-option">
+          <input type="radio" name="filter" value="all">
+          <span class="radio-control">
+            <span class="radio-circle"></span>
+            <span class="radio-label">Vis alle</span>
+          </span>
+        </label>
+        
+      </fieldset>
     </div>
 
     <div class="status">
-      <span class="status-dot" id="status-dot"></span>
-      <span class="status-text" id="status-text">Viser alle posteringer</span>
+      <span class="status-dot active" id="status-dot"></span>
+      <span class="status-text" id="status-text">Viser kun uafstemte posteringer</span>
     </div>
-
-    <div class="footer">Genindlæs siden for at anvende</div>
   </div>
 
   <script src="popup.js"></script>
