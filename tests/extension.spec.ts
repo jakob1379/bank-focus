@@ -71,6 +71,208 @@ test.describe('Nykredit Extension', () => {
   });
 
   test.describe('Content Script', () => {
+
+    test('applies active filter immediately when an entry is toggled', async ({ page }) => {
+      const contentScriptPath = path.join(__dirname, '..', 'src', 'content.js');
+      const contentScript = fs.readFileSync(contentScriptPath, 'utf-8');
+
+      await page.setContent(`
+        <div class="PostingTable">
+          <div class="PostingTable-tr">
+            <input type="checkbox">
+          </div>
+          <div class="PostingTable-tr">
+            <input type="checkbox" checked>
+          </div>
+          <div class="PostingTable-tr" data-test-target-row="toggle-target">
+            <input type="checkbox" data-test-target-checkbox="toggle-target">
+          </div>
+        </div>
+      `);
+
+      await page.evaluate(() => {
+        const mockStorage = { filterMode: 'all' };
+        const normalizeGetResult = (key) => {
+          if (Array.isArray(key)) {
+            return key.reduce((acc, currentKey) => {
+              acc[currentKey] = mockStorage[currentKey];
+              return acc;
+            }, {});
+          }
+
+          if (typeof key === 'string') {
+            return { [key]: mockStorage[key] };
+          }
+
+          if (key && typeof key === 'object') {
+            return Object.keys(key).reduce((acc, currentKey) => {
+              acc[currentKey] = mockStorage[currentKey] ?? key[currentKey];
+              return acc;
+            }, {});
+          }
+
+          return { ...mockStorage };
+        };
+
+        window.browser = {
+          storage: {
+            local: {
+              get: (key) => Promise.resolve(normalizeGetResult(key)),
+              set: (obj) => {
+                Object.assign(mockStorage, obj);
+                return Promise.resolve();
+              },
+              remove: (key) => {
+                const keys = Array.isArray(key) ? key : [key];
+                keys.forEach((currentKey) => delete mockStorage[currentKey]);
+                return Promise.resolve();
+              }
+            }
+          },
+          runtime: {
+            onMessage: {
+              addListener: (fn) => {
+                window.__messageListener = fn;
+              }
+            },
+            sendMessage: () => Promise.resolve()
+          },
+          tabs: {
+            query: () => Promise.resolve([{ id: 1 }]),
+            sendMessage: () => Promise.resolve()
+          },
+          action: {
+            setIcon: () => Promise.resolve()
+          }
+        };
+        window.chrome = window.browser;
+      });
+
+      await page.addScriptTag({ content: contentScript });
+
+      await page.evaluate(() => {
+        window.__messageListener?.({ action: 'setFilterMode', mode: 'unchecked-only' });
+      });
+
+      const targetRow = page.locator('[data-test-target-row="toggle-target"]');
+      const targetCheckbox = page.locator('[data-test-target-checkbox="toggle-target"]');
+
+      await expect(targetCheckbox).not.toBeChecked();
+
+      await targetCheckbox.evaluate((element) => {
+        const checkbox = element as HTMLInputElement;
+        checkbox.checked = true;
+        checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+
+      await expect
+        .poll(
+          async () => targetRow.evaluate((element) => getComputedStyle(element).display),
+          { timeout: 1500 }
+        )
+        .toBe('none');
+    });
+
+    test('reprocesses rows when a checkbox is added later and then toggled', async ({ page }) => {
+      const contentScriptPath = path.join(__dirname, '..', 'src', 'content.js');
+      const contentScript = fs.readFileSync(contentScriptPath, 'utf-8');
+
+      await page.setContent(`
+        <div class="PostingTable">
+          <div class="PostingTable-tr" data-test-target-row="toggle-target"></div>
+        </div>
+      `);
+
+      await page.evaluate(() => {
+        const mockStorage = { filterMode: 'all' };
+        const normalizeGetResult = (key) => {
+          if (Array.isArray(key)) {
+            return key.reduce((acc, currentKey) => {
+              acc[currentKey] = mockStorage[currentKey];
+              return acc;
+            }, {});
+          }
+
+          if (typeof key === 'string') {
+            return { [key]: mockStorage[key] };
+          }
+
+          if (key && typeof key === 'object') {
+            return Object.keys(key).reduce((acc, currentKey) => {
+              acc[currentKey] = mockStorage[currentKey] ?? key[currentKey];
+              return acc;
+            }, {});
+          }
+
+          return { ...mockStorage };
+        };
+
+        window.browser = {
+          storage: {
+            local: {
+              get: (key) => Promise.resolve(normalizeGetResult(key)),
+              set: (obj) => {
+                Object.assign(mockStorage, obj);
+                return Promise.resolve();
+              },
+              remove: (key) => {
+                const keys = Array.isArray(key) ? key : [key];
+                keys.forEach((currentKey) => delete mockStorage[currentKey]);
+                return Promise.resolve();
+              }
+            }
+          },
+          runtime: {
+            onMessage: {
+              addListener: (fn) => {
+                window.__messageListener = fn;
+              }
+            },
+            sendMessage: () => Promise.resolve()
+          },
+          tabs: {
+            query: () => Promise.resolve([{ id: 1 }]),
+            sendMessage: () => Promise.resolve()
+          },
+          action: {
+            setIcon: () => Promise.resolve()
+          }
+        };
+        window.chrome = window.browser;
+      });
+
+      await page.addScriptTag({ content: contentScript });
+
+      await page.evaluate(() => {
+        window.__messageListener?.({ action: 'setFilterMode', mode: 'unchecked-only' });
+      });
+
+      await page.evaluate(() => {
+        const row = document.querySelector('[data-test-target-row="toggle-target"]');
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.setAttribute('data-test-target-checkbox', 'toggle-target');
+        row?.appendChild(checkbox);
+      });
+
+      const targetRow = page.locator('[data-test-target-row="toggle-target"]');
+      const targetCheckbox = page.locator('[data-test-target-checkbox="toggle-target"]');
+
+      await expect(targetCheckbox).not.toBeChecked();
+
+      await targetCheckbox.evaluate((element) => {
+        const checkbox = element as HTMLInputElement;
+        checkbox.checked = true;
+        checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+
+      await expect
+        .poll(
+          async () => targetRow.evaluate((element) => getComputedStyle(element).display),
+          { timeout: 1500 }
+        )
+        .toBe('none');
+    });
     
     test('hides checked rows when enabled', async ({ page }) => {
       // Load the page with content script injected after DOM is ready
