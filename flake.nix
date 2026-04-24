@@ -2,94 +2,147 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     utils.url = "github:numtide/flake-utils";
+    git-hooks.url = "github:cachix/git-hooks.nix";
+    git-hooks.inputs.nixpkgs.follows = "nixpkgs";
   };
-  outputs = { self, nixpkgs, utils }: utils.lib.eachDefaultSystem (system:
-    let
-      pkgs = nixpkgs.legacyPackages.${system};
+  outputs =
+    {
+      self,
+      nixpkgs,
+      utils,
+      git-hooks,
+    }:
+    utils.lib.eachDefaultSystem (
+      system:
+      let
+        pkgs = nixpkgs.legacyPackages.${system};
+        pre-commit-check = git-hooks.lib.${system}.run {
+          src = ./.;
+          excludes = [ "^tests/fixtures/" ];
+          hooks = {
+            check-added-large-files.enable = true;
+            check-merge-conflicts.enable = true;
+            check-json.enable = true;
+            check-yaml.enable = true;
+            actionlint.enable = true;
+            shellcheck.enable = true;
+            codespell = {
+              enable = true;
+              package = pkgs.codespell;
+              entry = "${pkgs.lib.getExe pkgs.codespell}";
+              args = [
+                "-L"
+                "alle"
+              ];
+            };
+            nixfmt.enable = true;
+          };
+        };
 
-      mkExtension = name: outputFile: pkgs.stdenvNoCC.mkDerivation {
-        inherit name;
-        src = ./.;
+        fmt =
+          let
+            inherit (pre-commit-check.config) package configFile;
+          in
+          pkgs.writeShellApplication {
+            name = "fmt";
+            runtimeInputs = [ package ];
+            text = ''
+              ${pkgs.lib.getExe package} run --all-files --config ${configFile}
+            '';
+          };
 
-        nativeBuildInputs = [ pkgs.zip ];
+        mkExtension =
+          name: outputFile:
+          pkgs.stdenvNoCC.mkDerivation {
+            inherit name;
+            src = ./.;
 
-        buildPhase = ''
-          export HOME=$TMPDIR
-          bash pack.sh
-        '';
+            nativeBuildInputs = [ pkgs.zip ];
 
-        installPhase = ''
-          mkdir -p $out
-          cp ${outputFile} $out/
-        '';
-      };
+            buildPhase = ''
+              export HOME=$TMPDIR
+              bash pack.sh
+            '';
 
-      pack = pkgs.writeShellApplication {
-        name = "pack";
-        runtimeInputs = with pkgs; [ zip ];
-        text = ''
-          bash pack.sh
-        '';
-      };
+            installPhase = ''
+              mkdir -p $out
+              cp ${outputFile} $out/
+            '';
+          };
 
-      # Playwright test package - uses Nix-managed playwright
-      run-tests = pkgs.writeShellApplication {
-        name = "run-tests";
-        runtimeInputs = with pkgs; [
-          playwright-test
-          nodePackages.http-server
-        ];
-        text = ''
-          # Setup extension files first
-          bash tests/setup-tests.sh
+        pack = pkgs.writeShellApplication {
+          name = "pack";
+          runtimeInputs = with pkgs; [ zip ];
+          text = ''
+            bash pack.sh
+          '';
+        };
 
-          # Start HTTP server for test fixtures in background
-          echo "Starting HTTP server for test fixtures..."
-          http-server tests/fixtures -p 8080 --silent &
-          HTTP_SERVER_PID=$!
+        # Playwright test package - uses Nix-managed playwright
+        run-tests = pkgs.writeShellApplication {
+          name = "run-tests";
+          runtimeInputs = with pkgs; [
+            playwright-test
+            nodePackages.http-server
+          ];
+          text = ''
+            # Setup extension files first
+            bash tests/setup-tests.sh
 
-          # Wait for server to be ready
-          sleep 1
+            # Start HTTP server for test fixtures in background
+            echo "Starting HTTP server for test fixtures..."
+            http-server tests/fixtures -p 8080 --silent &
+            HTTP_SERVER_PID=$!
 
-          # Cleanup function
-          cleanup() {
-            echo "Stopping HTTP server..."
-            kill $HTTP_SERVER_PID 2>/dev/null || true
-          }
-          trap cleanup EXIT
+            # Wait for server to be ready
+            sleep 1
 
-          # Run tests from tests directory
-          cd tests
+            # Cleanup function
+            cleanup() {
+              echo "Stopping HTTP server..."
+              kill $HTTP_SERVER_PID 2>/dev/null || true
+            }
+            trap cleanup EXIT
 
-          # Set Playwright to use Nix-managed browsers
-          export PLAYWRIGHT_BROWSERS_PATH="${pkgs.playwright-driver.browsers}"
-          export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+            # Run tests from tests directory
+            cd tests
 
-          echo "Running Playwright tests..."
-          playwright test "$@"
-        '';
-      };
-    in
+            # Set Playwright to use Nix-managed browsers
+            export PLAYWRIGHT_BROWSERS_PATH="${pkgs.playwright-driver.browsers}"
+            export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+
+            echo "Running Playwright tests..."
+            playwright test "$@"
+          '';
+        };
+      in
       {
+        checks.pre-commit-check = pre-commit-check;
+
+        formatter = fmt;
+
         packages = {
           chrome = mkExtension "nykredit-extension-chrome" "chrome.zip";
           firefox = mkExtension "nykredit-extension-firefox" "firefox.xpi";
           default = self.packages.${system}.firefox;
           act = pkgs.act;
-          prek = pkgs.prek;
           pack = pack;
           run-tests = run-tests;
         };
 
         devShells.default = pkgs.mkShell {
-          packages = with pkgs; [
-            zip
-            playwright-test
-            act
-            prek
-          ];
+          packages =
+            with pkgs;
+            [
+              zip
+              playwright-test
+              act
+            ]
+            ++ pre-commit-check.enabledPackages;
 
           shellHook = ''
+            ${pre-commit-check.shellHook}
+
             echo "Nykredit Extension Development Environment"
             echo ""
             echo "Available commands:"
@@ -98,10 +151,11 @@
             echo "  nix run .#pack            - Pack both browser artifacts"
             echo "  nix run .#run-tests       - Run Playwright tests"
             echo "  nix run .#act -- -j test  - Run GitHub Actions locally"
-            echo "  nix run .#prek -- run --all-files"
-            echo "  nix run .#prek -- autoupdate"
+            echo "  nix flake check           - Run all checks (incl. hooks)"
+            echo "  nix fmt                   - Format/lint all files via hooks"
+            echo "  nix develop -c pre-commit run -a"
             echo "  act                       - Run GitHub Actions locally"
-            echo "  prek                      - Run pre-commit hooks"
+            echo "  pre-commit                - Run pre-commit hooks"
             echo ""
             echo "Test commands:"
             echo "  nix run .#run-tests                      - Run all tests (headless)"
@@ -115,5 +169,5 @@
           '';
         };
       }
-  );
+    );
 }

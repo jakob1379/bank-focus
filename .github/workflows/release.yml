@@ -103,9 +103,9 @@ jobs:
           RELEASE_TAG: ${{ github.ref_name }}
         run: |
           VERSION="${RELEASE_TAG#v}"
-          mv chrome.zip nykredit-extension-${VERSION}-chrome.zip
-          mv firefox.xpi nykredit-extension-${VERSION}-firefox.xpi
-          mv source.zip nykredit-extension-${VERSION}-source.zip
+          mv chrome.zip "nykredit-extension-${VERSION}-chrome.zip"
+          mv firefox.xpi "nykredit-extension-${VERSION}-firefox.xpi"
+          mv source.zip "nykredit-extension-${VERSION}-source.zip"
 
       - name: Create Release
         uses: softprops/action-gh-release@v2

@@ -3,6 +3,7 @@
 *.zip
 *.xpi
 result
+/.pre-commit-config.yaml
 
 # Playwright test artifacts
 tests/node_modules/
