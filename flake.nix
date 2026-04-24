@@ -70,6 +70,21 @@
             '';
           };
 
+        chrome = mkExtension "nykredit-extension-chrome" "chrome.zip";
+
+        firefox = mkExtension "nykredit-extension-firefox" "firefox.xpi";
+
+        all = pkgs.linkFarm "nykredit-extension-all" [
+          {
+            name = "chrome.zip";
+            path = "${chrome}/chrome.zip";
+          }
+          {
+            name = "firefox.xpi";
+            path = "${firefox}/firefox.xpi";
+          }
+        ];
+
         pack = pkgs.writeShellApplication {
           name = "pack";
           runtimeInputs = with pkgs; [ zip ];
@@ -122,8 +137,7 @@
         formatter = fmt;
 
         packages = {
-          chrome = mkExtension "nykredit-extension-chrome" "chrome.zip";
-          firefox = mkExtension "nykredit-extension-firefox" "firefox.xpi";
+          inherit chrome firefox all;
           default = self.packages.${system}.firefox;
           act = pkgs.act;
           pack = pack;
@@ -146,6 +160,7 @@
             echo "Nykredit Extension Development Environment"
             echo ""
             echo "Available commands:"
+            echo "  nix build .#all           - Build both browser extensions"
             echo "  nix build .#chrome        - Build Chrome extension"
             echo "  nix build .#firefox       - Build Firefox extension"
             echo "  nix run .#pack            - Pack both browser artifacts"
