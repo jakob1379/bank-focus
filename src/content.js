@@ -3,6 +3,7 @@ const browserAPI = typeof browser !== 'undefined' ? browser : chrome;
 // State management
 let observer = null;
 let currentMode = 'all';
+let modeChangedBeforeInit = false;
 const processedRows = new WeakSet();
 
 // CSS styles for animations
@@ -223,12 +224,15 @@ async function migrateFromLegacy() {
   injectStyles();
   
   const mode = await migrateFromLegacy();
-  currentMode = mode;
-  
-  if (currentMode !== 'all') {
-    enable();
+
+  if (!modeChangedBeforeInit) {
+    currentMode = mode;
+
+    if (currentMode !== 'all') {
+      enable();
+    }
   }
-  
+
   updateIcon();
 })();
 
@@ -241,7 +245,8 @@ browserAPI.runtime.onMessage.addListener((msg) => {
       console.warn('Invalid filter mode:', newMode);
       return;
     }
-    
+
+    modeChangedBeforeInit = true;
     setFilterMode(newMode);
     
     // Save to storage
