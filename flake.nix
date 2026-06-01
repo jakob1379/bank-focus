@@ -98,7 +98,7 @@
           name = "run-tests";
           runtimeInputs = with pkgs; [
             playwright-test
-            nodePackages.http-server
+            http-server
           ];
           text = ''
             # Setup extension files first
