@@ -136,7 +136,7 @@ jobs:
 
       - name: Publish to Chrome Web Store
         if: ${{ env.CHROME_CLIENT_ID != '' && env.CHROME_CLIENT_SECRET != '' && env.CHROME_REFRESH_TOKEN != '' && env.CHROME_EXTENSION_ID != '' }}
-        uses: wdzeng/chrome-extension@v1
+        uses: wdzeng/chrome-extension@v2
         with:
           extension-id: ${{ env.CHROME_EXTENSION_ID }}
           zip-path: nykredit-extension-*-chrome.zip
