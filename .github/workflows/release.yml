@@ -43,6 +43,7 @@ jobs:
       CHROME_CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
       CHROME_REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
       CHROME_EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
+      CHROME_PUBLISHER_ID: ${{ secrets.CHROME_PUBLISHER_ID }}
     
     steps:
       - name: Checkout
@@ -135,16 +136,17 @@ jobs:
           echo "Firefox publish skipped: set FIREFOX_ISSUER and FIREFOX_SECRET repository secrets."
 
       - name: Publish to Chrome Web Store
-        if: ${{ env.CHROME_CLIENT_ID != '' && env.CHROME_CLIENT_SECRET != '' && env.CHROME_REFRESH_TOKEN != '' && env.CHROME_EXTENSION_ID != '' }}
-        uses: wdzeng/chrome-extension@v1
+        if: ${{ env.CHROME_CLIENT_ID != '' && env.CHROME_CLIENT_SECRET != '' && env.CHROME_REFRESH_TOKEN != '' && env.CHROME_EXTENSION_ID != '' && env.CHROME_PUBLISHER_ID != '' }}
+        uses: wdzeng/chrome-extension@v2
         with:
           extension-id: ${{ env.CHROME_EXTENSION_ID }}
           zip-path: nykredit-extension-*-chrome.zip
+          publisher-id: ${{ env.CHROME_PUBLISHER_ID }}
           client-id: ${{ env.CHROME_CLIENT_ID }}
           client-secret: ${{ env.CHROME_CLIENT_SECRET }}
           refresh-token: ${{ env.CHROME_REFRESH_TOKEN }}
 
       - name: Skip Chrome publish (missing secrets)
-        if: ${{ env.CHROME_CLIENT_ID == '' || env.CHROME_CLIENT_SECRET == '' || env.CHROME_REFRESH_TOKEN == '' || env.CHROME_EXTENSION_ID == '' }}
+        if: ${{ env.CHROME_CLIENT_ID == '' || env.CHROME_CLIENT_SECRET == '' || env.CHROME_REFRESH_TOKEN == '' || env.CHROME_EXTENSION_ID == '' || env.CHROME_PUBLISHER_ID == '' }}
         run: |
-          echo "Chrome publish skipped: set CHROME_CLIENT_ID, CHROME_CLIENT_SECRET, CHROME_REFRESH_TOKEN, and CHROME_EXTENSION_ID secrets."
+          echo "Chrome publish skipped: set CHROME_CLIENT_ID, CHROME_CLIENT_SECRET, CHROME_REFRESH_TOKEN, CHROME_EXTENSION_ID, and CHROME_PUBLISHER_ID secrets."
