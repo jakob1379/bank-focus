@@ -1,0 +1,174 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 480" width="960" height="480" role="img" aria-labelledby="t d">
+<title id="t">Fokus for Nykredit filtering a transaction list</title>
+<desc id="d">A list of seven February transactions next to the extension popup. The popup switches from "Vis alle" to "Kun uafstemte": reconciled rows fade out to the left and the three unreconciled rows close up. It then switches to "Kun afstemte", showing only the four reconciled rows, and back to "Vis alle".</desc>
+<style>
+:root{
+  --bg:#E4EAEE;--panel:#FBFCFD;--ink:#15202B;--muted:#677380;--line:#D5DCE2;
+  --accent:#2B4FD6;--tint:#E8EDFC;--attn:#DC8F1E;--income:#1A7F5A;--on:#14A06B;--off:#B7C0C8;--check:#FFFFFF;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#0E141A;--panel:#17202A;--ink:#E5ECF2;--muted:#8E9BA8;--line:#283543;
+    --accent:#8AA4FF;--tint:#202C45;--attn:#F0B04E;--income:#4FC795;--on:#3DD08F;--off:#4A5764;--check:#0E141A;
+  }
+}
+svg{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+.bg{fill:var(--bg)}
+.panel{fill:var(--panel);stroke:var(--line)}
+.rule{stroke:var(--line);stroke-width:1}
+.h{fill:var(--ink);font-size:16px;font-weight:600}
+.muted{fill:var(--muted)}
+.day{fill:var(--ink);font-size:15px;font-weight:600;text-anchor:middle}
+.mon{fill:var(--muted);font-size:11px;text-anchor:middle}
+.txt{fill:var(--ink);font-size:14px}
+.amt{fill:var(--ink);font-size:14px;text-anchor:end;font-variant-numeric:tabular-nums}
+.inc{fill:var(--income)}
+.attn{fill:var(--attn)}
+.box{fill:none;stroke:var(--accent);stroke-width:1.6}
+.box.on{fill:var(--accent)}
+.tick{fill:none;stroke:var(--check);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.opt{fill:var(--panel);stroke:var(--line)}
+.sel{fill:var(--tint);stroke:var(--accent);stroke-width:1.5}
+.ring{fill:none;stroke:var(--off);stroke-width:2}
+.ring.sel-ring{stroke:var(--accent);stroke-width:5}
+.lbl{fill:var(--ink);font-size:13px;font-weight:500}
+.st{fill:var(--muted);font-size:11.5px;font-weight:500}
+.icon{fill:var(--ink)}
+.icon-path{fill:none;stroke:var(--panel);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* Static state (also the reduced-motion picture): "Kun uafstemte" selected, reconciled rows ghosted where they were. */
+.r0{transform:translate(30px,100px);opacity:.22}
+.r1{transform:translate(40px,146px)}
+.r2{transform:translate(30px,192px);opacity:.22}
+.r3{transform:translate(30px,238px);opacity:.22}
+.r4{transform:translate(40px,284px)}
+.r5{transform:translate(30px,330px);opacity:.22}
+.r6{transform:translate(40px,376px)}
+.mv{transform:translateY(0px)}
+.sA,.sC,.cA,.cC{opacity:0}
+.sB,.cB,.dot-on{opacity:1}
+
+@media (prefers-reduced-motion: no-preference){
+  .r0,.r1,.r2,.r3,.r4,.r5,.r6,.mv,.sA,.sB,.sC,.cA,.cB,.cC,.dot-on{
+    animation-duration:12s;animation-iteration-count:infinite;animation-timing-function:cubic-bezier(.4,0,.2,1)
+  }
+  .r0{animation-name:c0}.r2{animation-name:c2}.r3{animation-name:c3}.r5{animation-name:c5}
+  .r1{animation-name:u1}.r4{animation-name:u4}.r6{animation-name:u6}
+  .mv{animation-name:mv}
+  .sA,.cA{animation-name:fA}.sB,.cB{animation-name:fB}.sC,.cC{animation-name:fC}
+  .dot-on{animation-name:fBC}
+}
+@media (prefers-reduced-motion: reduce){
+  .r0,.r1,.r2,.r3,.r4,.r5,.r6,.mv,.sA,.sB,.sC,.cA,.cB,.cC,.dot-on{animation:none}
+}
+
+/* Reconciled rows: fade out left on "Kun uafstemte", reappear packed on "Kun afstemte", slide home on "Vis alle". */
+@keyframes c0{0%,21%{transform:translate(40px,100px);opacity:1}24.5%,57%{transform:translate(30px,100px);opacity:0}59.5%,100%{transform:translate(40px,100px);opacity:1}}
+@keyframes c2{0%,21%{transform:translate(40px,192px);opacity:1}24.5%,53%{transform:translate(30px,192px);opacity:0}57%{transform:translate(30px,146px);opacity:0}59.5%,83%{transform:translate(40px,146px);opacity:1}87%,100%{transform:translate(40px,192px);opacity:1}}
+@keyframes c3{0%,21%{transform:translate(40px,238px);opacity:1}24.5%,53%{transform:translate(30px,238px);opacity:0}57%{transform:translate(30px,192px);opacity:0}59.5%,83%{transform:translate(40px,192px);opacity:1}87%,100%{transform:translate(40px,238px);opacity:1}}
+@keyframes c5{0%,21%{transform:translate(40px,330px);opacity:1}24.5%,53%{transform:translate(30px,330px);opacity:0}57%{transform:translate(30px,238px);opacity:0}59.5%,83%{transform:translate(40px,238px);opacity:1}87%,100%{transform:translate(40px,330px);opacity:1}}
+/* Unreconciled rows: close up under "Kun uafstemte", fade out on "Kun afstemte", return on "Vis alle". */
+@keyframes u1{0%,24.5%{transform:translate(40px,146px);opacity:1}28.5%,53%{transform:translate(40px,100px);opacity:1}56.5%,84%{transform:translate(30px,100px);opacity:0}84.5%,87%{transform:translate(30px,146px);opacity:0}89.5%,100%{transform:translate(40px,146px);opacity:1}}
+@keyframes u4{0%,24.5%{transform:translate(40px,284px);opacity:1}28.5%,53%{transform:translate(40px,146px);opacity:1}56.5%,84%{transform:translate(30px,146px);opacity:0}84.5%,87%{transform:translate(30px,284px);opacity:0}89.5%,100%{transform:translate(40px,284px);opacity:1}}
+@keyframes u6{0%,24.5%{transform:translate(40px,376px);opacity:1}28.5%,53%{transform:translate(40px,192px);opacity:1}56.5%,84%{transform:translate(30px,192px);opacity:0}84.5%,87%{transform:translate(30px,376px);opacity:0}89.5%,100%{transform:translate(40px,376px);opacity:1}}
+/* Popup selection: Vis alle -> Kun uafstemte -> Kun afstemte -> Vis alle */
+@keyframes mv{0%,19%{transform:translateY(92px)}22%,50%{transform:translateY(0px)}53%,80%{transform:translateY(46px)}83%,100%{transform:translateY(92px)}}
+@keyframes fA{0%,19%{opacity:1}21%,81%{opacity:0}83%,100%{opacity:1}}
+@keyframes fB{0%,20%{opacity:0}22%,50%{opacity:1}52%,100%{opacity:0}}
+@keyframes fC{0%,51%{opacity:0}53%,80%{opacity:1}82%,100%{opacity:0}}
+@keyframes fBC{0%,19%{opacity:0}21%,81%{opacity:1}83%,100%{opacity:0}}
+</style>
+
+<rect class="bg" width="960" height="480"/>
+
+<!-- Transaction list -->
+<rect class="panel" x="40.5" y="40.5" width="559" height="397" rx="14"/>
+<text class="h" x="64" y="78">Februar 2026</text>
+<g font-size="12.5" text-anchor="end">
+  <text class="muted cA" x="576" y="78">Viser 7 af 7</text>
+  <text class="muted cB" x="576" y="78">Viser 3 af 7</text>
+  <text class="muted cC" x="576" y="78">Viser 4 af 7</text>
+</g>
+<line class="rule" x1="56" y1="98.5" x2="584" y2="98.5"/>
+
+<g class="r0">
+  <text class="day" x="34" y="22">26</text><text class="mon" x="34" y="36">feb.</text>
+  <text class="txt" x="72" y="28">Husleje</text>
+  <text class="amt" x="484" y="28">-6.200,00</text>
+  <rect class="box on" x="508" y="14" width="18" height="18" rx="4"/><path class="tick" d="M512 23l3.5 3.5 6.5-7"/>
+  <line class="rule" x1="16" y1="45.5" x2="544" y2="45.5"/>
+</g>
+<g class="r1">
+  <rect class="attn" x="7" y="12" width="3" height="22" rx="1.5"/>
+  <text class="day" x="34" y="22">24</text><text class="mon" x="34" y="36">feb.</text>
+  <text class="txt" x="72" y="28">Udlejning damprenser</text>
+  <text class="amt" x="484" y="28">-96,00</text>
+  <rect class="box" x="508" y="14" width="18" height="18" rx="4"/>
+  <line class="rule" x1="16" y1="45.5" x2="544" y2="45.5"/>
+</g>
+<g class="r2">
+  <text class="day" x="34" y="22">21</text><text class="mon" x="34" y="36">feb.</text>
+  <text class="txt" x="72" y="28">Løn</text>
+  <text class="amt inc" x="484" y="28">18.450,00</text>
+  <rect class="box on" x="508" y="14" width="18" height="18" rx="4"/><path class="tick" d="M512 23l3.5 3.5 6.5-7"/>
+  <line class="rule" x1="16" y1="45.5" x2="544" y2="45.5"/>
+</g>
+<g class="r3">
+  <text class="day" x="34" y="22">19</text><text class="mon" x="34" y="36">feb.</text>
+  <text class="txt" x="72" y="28">Dagligvarer</text>
+  <text class="amt" x="484" y="28">-412,75</text>
+  <rect class="box on" x="508" y="14" width="18" height="18" rx="4"/><path class="tick" d="M512 23l3.5 3.5 6.5-7"/>
+  <line class="rule" x1="16" y1="45.5" x2="544" y2="45.5"/>
+</g>
+<g class="r4">
+  <rect class="attn" x="7" y="12" width="3" height="22" rx="1.5"/>
+  <text class="day" x="34" y="22">17</text><text class="mon" x="34" y="36">feb.</text>
+  <text class="txt" x="72" y="28">Tandlæge</text>
+  <text class="amt" x="484" y="28">-650,00</text>
+  <rect class="box" x="508" y="14" width="18" height="18" rx="4"/>
+  <line class="rule" x1="16" y1="45.5" x2="544" y2="45.5"/>
+</g>
+<g class="r5">
+  <text class="day" x="34" y="22">14</text><text class="mon" x="34" y="36">feb.</text>
+  <text class="txt" x="72" y="28">Elregning</text>
+  <text class="amt" x="484" y="28">-538,20</text>
+  <rect class="box on" x="508" y="14" width="18" height="18" rx="4"/><path class="tick" d="M512 23l3.5 3.5 6.5-7"/>
+  <line class="rule" x1="16" y1="45.5" x2="544" y2="45.5"/>
+</g>
+<g class="r6">
+  <rect class="attn" x="7" y="12" width="3" height="22" rx="1.5"/>
+  <text class="day" x="34" y="22">11</text><text class="mon" x="34" y="36">feb.</text>
+  <text class="txt" x="72" y="28">Overførsel fra opsparing</text>
+  <text class="amt inc" x="484" y="28">1.000,00</text>
+  <rect class="box" x="508" y="14" width="18" height="18" rx="4"/>
+</g>
+
+<!-- Extension popup -->
+<rect class="panel" x="640.5" y="89.5" width="279" height="299" rx="12"/>
+<rect class="icon" x="660" y="109" width="28" height="28" rx="7"/>
+<g class="icon-path" transform="translate(664 113) scale(.833)">
+  <path d="M3 3v18h18"/><path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/>
+</g>
+<text class="h" x="700" y="128" style="font-size:13.5px">Fokus for Nykredit</text>
+<line class="rule" x1="656" y1="152.5" x2="904" y2="152.5"/>
+<text class="lbl" x="660" y="180">Filtrer posteringer</text>
+
+<rect class="opt" x="660.5" y="194.5" width="239" height="37" rx="8"/>
+<rect class="opt" x="660.5" y="240.5" width="239" height="37" rx="8"/>
+<rect class="opt" x="660.5" y="286.5" width="239" height="37" rx="8"/>
+<g class="mv"><rect class="sel" x="660.75" y="194.75" width="238.5" height="36.5" rx="8"/></g>
+<circle class="ring" cx="681" cy="213" r="8"/>
+<circle class="ring" cx="681" cy="259" r="8"/>
+<circle class="ring" cx="681" cy="305" r="8"/>
+<g class="mv"><circle class="ring sel-ring" cx="681" cy="213" r="6.5"/></g>
+<text class="lbl" x="700" y="217.5">Kun uafstemte</text>
+<text class="lbl" x="700" y="263.5">Kun afstemte</text>
+<text class="lbl" x="700" y="309.5">Vis alle</text>
+
+<line class="rule" x1="656" y1="342.5" x2="904" y2="342.5"/>
+<circle cx="664" cy="365" r="3" style="fill:var(--off)"/>
+<circle class="dot-on" cx="664" cy="365" r="3" style="fill:var(--on)"/>
+<text class="st sA" x="674" y="369">Viser alle posteringer</text>
+<text class="st sB" x="674" y="369">Viser kun uafstemte posteringer</text>
+<text class="st sC" x="674" y="369">Viser kun afstemte posteringer</text>
+</svg>
