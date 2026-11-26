@@ -83,7 +83,7 @@ svg{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Ne
 
 <!-- Transaction list -->
 <rect class="panel" x="40.5" y="40.5" width="559" height="397" rx="14"/>
-<text class="h" x="64" y="78">Februar 2026</text>
+<text class="h" x="64" y="78">Februar 2026</text><!-- codespell:ignore Februar -->
 <g font-size="12.5" text-anchor="end">
   <text class="muted cA" x="576" y="78">Viser 7 af 7</text>
   <text class="muted cB" x="576" y="78">Viser 3 af 7</text>
